@@ -4,15 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 
 // ═══════════════════════════════════════════
 // AYMEDO — Cinematic Theatre Experience
-//
-// PHASE 1: Curtain closed (scroll 0–40%)
-//   → Spotlights → curtain opens with physics
-//
-// PHASE 2: Logo reveal (scroll 40–65%)
-//   → AYMEDO logo fades in center
-//
-// PHASE 3: Cinema screens (scroll 65–100%)
-//   → 4 video screens with glass frames
+// PERFORMANCE: rAF-driven, minimal re-renders
 // ═══════════════════════════════════════════
 
 const SCREENS = [
@@ -23,234 +15,281 @@ const SCREENS = [
 ]
 
 export default function Theatre() {
-  const [p, setP] = useState(0)
   const [activeAudio, setActiveAudio] = useState<string | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState<string | null>(null)
-  const [breath, setBreath] = useState(0)
-  const [mouse, setMouse] = useState({ x: 0.5, y: 0.5 })
   const [isPortrait, setIsPortrait] = useState(false)
-  const [rotatePhase, setRotatePhase] = useState(0)
+
+  // Performance: use refs instead of state for animation values
+  const pRef = useRef(0)
+  const breathRef = useRef(0)
+  const mouseRef = useRef({ x: 0.5, y: 0.5 })
+  const sceneRef = useRef<HTMLDivElement>(null)
   const videoRefs = useRef<Record<string, HTMLVideoElement>>({})
   const cinematicRef = useRef<HTMLVideoElement>(null)
+  const videosStarted = useRef(false)
+  const rotateRef = useRef(0)
 
-  // Detect portrait mode on mobile
+  // Detect portrait
   useEffect(() => {
     const check = () => {
-      const mobile = window.innerWidth < 768
-      const portrait = window.innerHeight > window.innerWidth
-      setIsPortrait(mobile && portrait)
+      setIsPortrait(window.innerWidth < 768 && window.innerHeight > window.innerWidth)
     }
     check()
     window.addEventListener('resize', check)
-    window.addEventListener('orientationchange', check)
-    return () => {
-      window.removeEventListener('resize', check)
-      window.removeEventListener('orientationchange', check)
-    }
+    return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Rotate phone animation
+  // MASTER ANIMATION LOOP — one rAF drives everything
   useEffect(() => {
-    if (!isPortrait) return
-    let id: number
-    let t = 0
-    const animate = () => {
-      t += 0.03
-      setRotatePhase(Math.sin(t) * 0.5 + 0.5)
-      id = requestAnimationFrame(animate)
+    let breathT = 0
+    let rotT = 0
+
+    const tick = () => {
+      // Scroll
+      const max = document.documentElement.scrollHeight - window.innerHeight
+      pRef.current = max > 0 ? window.scrollY / max : 0
+      const p = pRef.current
+
+      // Breathing
+      breathT += 0.004
+      breathRef.current = Math.sin(breathT) * 0.5 + 0.5
+      const b = breathRef.current
+
+      // Rotate phone
+      if (isPortrait) {
+        rotT += 0.03
+        rotateRef.current = Math.sin(rotT) * 0.5 + 0.5
+      }
+
+      // ── PHASE CALCULATIONS ──
+      const curtainProgress = Math.min(1, Math.max(0, p / 0.12))
+      const curtainEased = curtainProgress * curtainProgress * (3 - 2 * curtainProgress)
+      const spotI = Math.min(1, p / 0.03)
+
+      const lightLeak = Math.min(1, Math.max(0, (p - 0.06) / 0.05))
+      const logoGlow = Math.min(1, Math.max(0, (p - 0.08) / 0.04))
+      const logoReveal = Math.min(1, Math.max(0, (p - 0.10) / 0.05))
+      const logoZP = Math.min(1, Math.max(0, (p - 0.10) / 0.12))
+      const logoScale = 0.85 + (logoZP * logoZP) * 2.65
+      const logoFade = logoZP > 0.6 ? Math.max(0, 1 - (logoZP - 0.6) / 0.4) : 1
+
+      const videoFadeIn = Math.min(1, Math.max(0, (p - 0.22) / 0.06))
+      const videoProgress = Math.min(1, Math.max(0, (p - 0.23) / 0.49))
+      const videoFade = p > 0.70 ? Math.max(0, 1 - (p - 0.70) / 0.04) : 1
+
+      const cinemaReveal = Math.min(1, Math.max(0, (p - 0.72) / 0.10))
+      const scrollHint = Math.max(0, 1 - p * 6)
+
+      // ── APPLY TO DOM DIRECTLY (no setState) ──
+      const s = sceneRef.current
+      if (!s) { requestAnimationFrame(tick); return }
+
+      // Curtain left
+      const cL = s.querySelector('[data-c="l"]') as HTMLElement
+      const cR = s.querySelector('[data-c="r"]') as HTMLElement
+      if (cL) {
+        const lP = Math.min(1, Math.max(0, curtainEased))
+        cL.style.transform = `translateX(${-lP * 105}%) scaleX(${1 - lP * 0.15})`
+        cL.style.pointerEvents = lP > 0.95 ? 'none' : 'auto'
+        const cImg = cL.querySelector('div') as HTMLElement
+        if (cImg) cImg.style.filter = `brightness(${0.6 + spotI * 0.3})`
+      }
+      if (cR) {
+        const rP = Math.min(1, Math.max(0, curtainEased - 0.03))
+        cR.style.transform = `translateX(${rP * 105}%) scaleX(${1 - rP * 0.15})`
+        cR.style.pointerEvents = rP > 0.95 ? 'none' : 'auto'
+        const cImg = cR.querySelector('div') as HTMLElement
+        if (cImg) cImg.style.filter = `brightness(${0.6 + spotI * 0.3})`
+      }
+
+      // Light leak
+      const ll = s.querySelector('[data-ll]') as HTMLElement
+      if (ll) {
+        const sz = 120 + lightLeak * 300
+        ll.style.width = `${sz}px`; ll.style.height = `${sz}px`
+        ll.style.opacity = `${logoFade}`
+        ll.style.background = `radial-gradient(circle, rgba(244,199,107,${0.08 * lightLeak * (0.8 + b * 0.2)}) 0%, transparent 70%)`
+      }
+
+      // Logo container
+      const logo = s.querySelector('[data-logo]') as HTMLElement
+      if (logo) {
+        logo.style.opacity = `${logoReveal * logoFade}`
+        logo.style.transform = `scale(${logoScale})`
+      }
+
+      // Logo image rotation
+      const logoImg = s.querySelector('[data-logo-img]') as HTMLElement
+      if (logoImg) {
+        logoImg.style.transform = `rotate(${p * 12}deg)`
+        logoImg.style.filter = `drop-shadow(0 0 30px rgba(244,199,107,${0.15 + b * 0.1}))`
+      }
+
+      // Logo text area
+      const logoText = s.querySelector('[data-logo-text]') as HTMLElement
+      if (logoText) {
+        logoText.style.opacity = `${logoReveal * logoFade}`
+        logoText.style.transform = `translateY(${(1 - logoReveal) * 20}px)`
+      }
+
+      // Scroll-driven cinematic video
+      const vid = cinematicRef.current
+      if (vid && vid.duration && vid.duration !== Infinity && videoProgress > 0) {
+        const target = videoProgress * vid.duration
+        if (Math.abs(vid.currentTime - target) > 0.05) {
+          vid.currentTime = target
+        }
+      }
+
+      // Video layer
+      const vLayer = s.querySelector('[data-vlayer]') as HTMLElement
+      if (vLayer) {
+        vLayer.style.opacity = `${videoFade}`
+        const vEl = vLayer.querySelector('video') as HTMLElement
+        if (vEl) vEl.style.opacity = `${videoFadeIn}`
+        // Progress bar
+        const prog = vLayer.querySelector('[data-vprog]') as HTMLElement
+        if (prog) prog.style.width = `${videoProgress * 100}%`
+        // Side panels
+        const panels = vLayer.querySelectorAll('[data-panel]')
+        panels.forEach(panel => { (panel as HTMLElement).style.opacity = `${videoFadeIn}` })
+        // Stripe animation
+        const stripeOffset = videoProgress * 2000
+        const bandSize = 120
+        const sL = vLayer.querySelector('[data-stripe-l]') as HTMLElement
+        const sR = vLayer.querySelector('[data-stripe-r]') as HTMLElement
+        if (sL) sL.style.transform = `translateY(${stripeOffset % (bandSize * 2)}px)`
+        if (sR) sR.style.transform = `translateY(-${stripeOffset % (bandSize * 2)}px)`
+      }
+
+      // Cinema screens
+      const cinema = s.querySelector('[data-cinema]') as HTMLElement
+      if (cinema) {
+        cinema.style.opacity = `${cinemaReveal}`
+        cinema.style.transform = `scale(${0.92 + cinemaReveal * 0.08})`
+        cinema.style.pointerEvents = p > 0.80 ? 'auto' : 'none'
+      }
+
+      // Start videos early — once
+      if (p > 0.5 && !videosStarted.current) {
+        videosStarted.current = true
+        Object.values(videoRefs.current).forEach(v => {
+          if (v && v.paused) v.play().catch(() => {})
+        })
+        // Retry
+        setTimeout(() => {
+          Object.values(videoRefs.current).forEach(v => {
+            if (v && v.paused) v.play().catch(() => {})
+          })
+        }, 2000)
+      }
+
+      // Cinema bottom info
+      const cBot = s.querySelector('[data-cbot]') as HTMLElement
+      if (cBot) cBot.style.opacity = `${cinemaReveal}`
+
+      // Infinity
+      const inf = s.querySelector('[data-inf]') as HTMLElement
+      if (inf) inf.style.opacity = `${cinemaReveal > 0.2 ? cinemaReveal * 0.5 * (0.7 + b * 0.3) : 0}`
+
+      // Scroll hint
+      const sh = s.querySelector('[data-scroll]') as HTMLElement
+      if (sh) sh.style.opacity = `${scrollHint}`
+
+      // Stars breathing
+      const stars = s.querySelector('[data-stars]') as HTMLElement
+      if (stars) stars.style.opacity = `${0.6 + b * 0.1}`
+
+      // Sparkle
+      const sparkle = s.querySelector('[data-sparkle]') as HTMLElement
+      if (sparkle) sparkle.style.opacity = `${curtainEased > 0.3 ? Math.min(0.4, (curtainEased - 0.3) * 0.8) * (0.7 + b * 0.3) : 0}`
+
+      requestAnimationFrame(tick)
     }
-    id = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(id)
+
+    requestAnimationFrame(tick)
   }, [isPortrait])
 
-  // Scroll
+  // Mouse — raw listener, no setState
   useEffect(() => {
-    const fn = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight
-      setP(max > 0 ? window.scrollY / max : 0)
+    const fn = (e: MouseEvent) => {
+      mouseRef.current = { x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight }
     }
-    window.addEventListener('scroll', fn, { passive: true })
-    fn()
-    return () => window.removeEventListener('scroll', fn)
-  }, [])
-
-  // Breathing
-  useEffect(() => {
-    let t = 0; let id: number
-    const loop = () => { t += 0.004; setBreath(Math.sin(t) * 0.5 + 0.5); id = requestAnimationFrame(loop) }
-    id = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(id)
-  }, [])
-
-  // Mouse
-  useEffect(() => {
-    const fn = (e: MouseEvent) => setMouse({ x: e.clientX / window.innerWidth, y: e.clientY / window.innerHeight })
-    window.addEventListener('mousemove', fn)
+    window.addEventListener('mousemove', fn, { passive: true })
     return () => window.removeEventListener('mousemove', fn)
   }, [])
-
-  // Start cinema videos — aggressive retry for stubborn videos
-  useEffect(() => {
-    if (p > 0.55) {
-      const tryPlay = () => {
-        Object.values(videoRefs.current).forEach(v => {
-          if (v && v.paused) {
-            v.load()
-            v.play().catch(() => {})
-          }
-        })
-      }
-      tryPlay()
-      // Retry multiple times for slow-loading videos
-      const t1 = setTimeout(tryPlay, 500)
-      const t2 = setTimeout(tryPlay, 1500)
-      const t3 = setTimeout(tryPlay, 3000)
-      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
-    }
-  }, [p > 0.55])
-
-  // Scroll-driven video scrub (moved after phase calculations)
 
   // Audio
   const toggleAudio = useCallback((id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     const on = activeAudio !== id
     Object.values(videoRefs.current).forEach(v => { v.muted = true })
-    if (on && videoRefs.current[id]) { videoRefs.current[id].muted = false; videoRefs.current[id].volume = 1.0; if (videoRefs.current[id].paused) videoRefs.current[id].play().catch(() => {}) }
+    if (on && videoRefs.current[id]) {
+      videoRefs.current[id].muted = false
+      videoRefs.current[id].volume = 1.0
+      if (videoRefs.current[id].paused) videoRefs.current[id].play().catch(() => {})
+    }
     setActiveAudio(on ? id : null)
   }, [activeAudio])
 
-  const goFS = (id: string) => { if (p < 0.75) return; setFullscreen(prev => prev === id ? null : id) }
+  const goFS = (id: string) => setFullscreen(prev => prev === id ? null : id)
 
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { setFullscreen(null); return }
-      if (e.key === 'Enter' && p > 0.6) {
-        window.location.href = 'mailto:ola@aymedo.io'
-      }
+      if (e.key === 'Escape') setFullscreen(null)
+      if (e.key === 'Enter') window.location.href = 'mailto:ola@aymedo.io'
     }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
-  }, [p])
+  }, [])
 
-  // ── PHASE CALCULATIONS ──
-  // Phase 1: Curtain (0–0.12)
-  const curtainProgress = Math.min(1, Math.max(0, p / 0.12))
-  const curtainEased = curtainProgress * curtainProgress * (3 - 2 * curtainProgress)
-  const spotIntensity = Math.min(1, p / 0.03)
-
-  // Phase 2: Logo — appears, zooms in close, then dissolves into black
-  const lightLeak = Math.min(1, Math.max(0, (p - 0.06) / 0.05))
-  const logoGlow = Math.min(1, Math.max(0, (p - 0.08) / 0.04))
-  const logoReveal = Math.min(1, Math.max(0, (p - 0.10) / 0.05))
-  // Logo zooms from 0.85 → 3.5 (rushes toward viewer)
-  const logoZoomProgress = Math.min(1, Math.max(0, (p - 0.10) / 0.12))
-  const logoZoomEased = logoZoomProgress * logoZoomProgress // accelerating
-  const logoScale = 0.85 + logoZoomEased * 2.65
-  // Logo fades as it gets very close
-  const logoFade = logoZoomProgress > 0.6 ? Math.max(0, 1 - (logoZoomProgress - 0.6) / 0.4) : 1
-  const logoRotation = p * 12
-
-  // Phase 3: Scroll-driven video (0.22–0.72) — the journey
-  const videoFadeIn = Math.min(1, Math.max(0, (p - 0.22) / 0.06))
-  const videoProgress = Math.min(1, Math.max(0, (p - 0.23) / 0.49))
-  const videoFade = p > 0.70 ? Math.max(0, 1 - (p - 0.70) / 0.04) : 1
-
-  // Phase 4: Cinema (0.72–1.00)
-  const cinemaReveal = Math.min(1, Math.max(0, (p - 0.72) / 0.10))
-  const cinemaReady = p > 0.80
-
-  const scrollHint = Math.max(0, 1 - p * 6)
   const isFS = fullscreen !== null
-
-  // Scroll-driven video scrub
-  // eslint-disable-next-line react-hooks/rules-of-hooks
-  useEffect(() => {
-    const vid = cinematicRef.current
-    if (!vid || !vid.duration || vid.duration === Infinity) return
-    const target = videoProgress * vid.duration
-    if (Math.abs(vid.currentTime - target) > 0.03) {
-      vid.currentTime = target
-    }
-  }, [videoProgress])
 
   return (
     <div style={{ background: '#020101' }}>
 
-      {/* ═══ ROTATE PHONE OVERLAY ═══ */}
+      {/* ═══ ROTATE PHONE ═══ */}
       {isPortrait && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
           background: 'rgba(2,1,1,0.97)',
           display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          gap: '28px',
+          alignItems: 'center', justifyContent: 'center', gap: '28px',
           fontFamily: 'Inter, system-ui, sans-serif',
         }}>
-          {/* Phone icon rotating */}
-          <div style={{
-            transform: `rotate(${-90 * rotatePhase}deg)`,
-            transition: 'none',
-            fontSize: '0',
-          }}>
+          <div style={{ animation: 'phoneRotate 3s ease-in-out infinite' }}>
             <svg width="64" height="100" viewBox="0 0 64 100" fill="none">
               <rect x="4" y="4" width="56" height="92" rx="10" stroke="#F4C76B" strokeWidth="2.5" fill="none" />
               <circle cx="32" cy="86" r="4" stroke="#F4C76B" strokeWidth="1.5" fill="none" />
-              <rect x="22" y="10" width="20" height="3" rx="1.5" fill="rgba(244,199,107,0.3)" />
             </svg>
           </div>
-
-          {/* Rotating arrows around phone */}
-          <div style={{
-            opacity: 0.4 + rotatePhase * 0.4,
-          }}>
-            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
-              <path d="M30 8 A16 16 0 0 1 36 20" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M33 6 L30 8 L33 11" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M10 32 A16 16 0 0 1 4 20" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" />
-              <path d="M7 34 L10 32 L7 29" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-
-          <div style={{
-            color: '#F4C76B', fontSize: '14px', fontWeight: 300,
-            letterSpacing: '0.35em', textAlign: 'center',
-            opacity: 0.7 + rotatePhase * 0.3,
-          }}>
-            ROTATE YOUR PHONE
-          </div>
-          <div style={{
-            color: 'rgba(247,241,232,0.35)', fontSize: '11px', fontWeight: 200,
-            letterSpacing: '0.2em', textAlign: 'center',
-          }}>
-            FOR THE BEST EXPERIENCE
-          </div>
+          <div style={{ color: '#F4C76B', fontSize: '14px', fontWeight: 300, letterSpacing: '0.35em', opacity: 0.8 }}>ROTATE YOUR PHONE</div>
+          <div style={{ color: 'rgba(247,241,232,0.35)', fontSize: '11px', fontWeight: 200, letterSpacing: '0.2em' }}>FOR THE BEST EXPERIENCE</div>
         </div>
       )}
 
-      <div style={{ height: '1200vh' }} />
+      {/* Scroll space — reduced for faster response */}
+      <div style={{ height: '800vh' }} />
 
-      <div style={{
+      <div ref={sceneRef} style={{
         position: 'fixed', inset: 0, overflow: 'hidden',
         fontFamily: 'Inter, system-ui, sans-serif',
         background: '#020101',
       }}>
 
-        {/* ═══════════════════════════════════════
-             LAYER 0: COSMOS BACKGROUND
-            ═══════════════════════════════════════ */}
+        {/* ═══ COSMOS BG ═══ */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 0,
           background: `
             radial-gradient(ellipse 40% 50% at 25% 35%, rgba(180,120,60,0.06) 0%, transparent 70%),
             radial-gradient(ellipse 35% 45% at 75% 55%, rgba(100,80,160,0.04) 0%, transparent 70%),
-            radial-gradient(ellipse 50% 40% at 50% 80%, rgba(200,140,50,0.05) 0%, transparent 60%),
             radial-gradient(circle at 50% 50%, rgba(10,8,5,1) 0%, rgba(5,3,2,1) 100%)
           `, pointerEvents: 'none',
         }} />
+
         {/* Stars */}
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none', opacity: 0.6 + breath * 0.1,
+        <div data-stars style={{ position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
           backgroundImage: `
             radial-gradient(1px 1px at 10% 15%,rgba(255,255,255,0.7) 0%,transparent 100%),
             radial-gradient(1px 1px at 35% 8%,rgba(255,255,255,0.6) 0%,transparent 100%),
@@ -259,390 +298,160 @@ export default function Theatre() {
             radial-gradient(1px 1px at 92% 65%,rgba(255,255,255,0.5) 0%,transparent 100%),
             radial-gradient(2px 2px at 22% 28%,rgba(255,200,120,0.8) 0%,transparent 100%),
             radial-gradient(2px 2px at 62% 18%,rgba(180,200,255,0.7) 0%,transparent 100%),
-            radial-gradient(2px 2px at 48% 52%,rgba(255,240,200,0.6) 0%,transparent 100%),
-            radial-gradient(1px 1px at 5% 80%,rgba(255,255,255,0.4) 0%,transparent 100%),
-            radial-gradient(1px 1px at 85% 35%,rgba(255,255,255,0.5) 0%,transparent 100%),
             radial-gradient(1px 1px at 40% 70%,rgba(255,255,255,0.4) 0%,transparent 100%),
             radial-gradient(1px 1px at 68% 42%,rgba(255,255,255,0.5) 0%,transparent 100%)
           `,
         }} />
 
-        {/* ═══════════════════════════════════════
-             LAYER 1: CURTAINS (real photo texture)
-            ═══════════════════════════════════════ */}
-        {['left', 'right'].map(side => {
-          // Physics: right curtain slightly delayed
-          const delay = side === 'right' ? 0.03 : 0
-          const thisProgress = Math.min(1, Math.max(0, curtainEased - delay))
-          // Fabric compression: as curtain opens, it bunches at the edge
-          const scaleX = 1 - thisProgress * 0.15
-
-          return (
-            <div key={side} style={{
-              position: 'absolute', top: 0, [side]: 0,
-              width: '52%', height: '100%', zIndex: 20,
-              transform: `translateX(${side === 'left' ? -thisProgress * 105 : thisProgress * 105}%) scaleX(${scaleX})`,
-              transformOrigin: side === 'left' ? 'left center' : 'right center',
-              pointerEvents: thisProgress > 0.95 ? 'none' : 'auto',
-            }}>
-              {/* Real curtain photo */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                backgroundImage: 'url(/images/curtain-closed.jpg)',
-                backgroundSize: 'cover',
-                backgroundPosition: side === 'left' ? 'right center' : 'left center',
-                filter: `brightness(${0.6 + spotIntensity * 0.3})`,
-              }} />
-
-              {/* Dynamic shadow at opening edge */}
-              <div style={{
-                position: 'absolute', top: 0, bottom: 0,
-                [side === 'left' ? 'right' : 'left']: 0,
-                width: `${40 + thisProgress * 60}px`,
-                background: `linear-gradient(${side === 'left' ? '270deg' : '90deg'}, transparent, rgba(0,0,0,${0.7 + thisProgress * 0.3}))`,
-                pointerEvents: 'none',
-              }} />
-            </div>
-          )
-        })}
-
-        {/* Valance removed */}
-
-        {/* Light leak through curtain gap */}
-        <div style={{
-          position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)',
-          width: `${curtainEased * 60}%`, height: '90%',
-          background: `radial-gradient(ellipse at 50% 30%, rgba(255,220,150,${0.03 * curtainEased}) 0%, transparent 60%)`,
-          pointerEvents: 'none', zIndex: 19,
-        }} />
-
-        {/* Golden sparkle rain (from reference image) */}
-        {curtainEased > 0.3 && (
-          <div style={{
-            position: 'absolute', top: '5%', left: '45%', width: '10%', height: '80%',
-            opacity: Math.min(0.4, (curtainEased - 0.3) * 0.8) * (0.7 + breath * 0.3),
-            background: `
-              radial-gradient(1px 1px at 20% 10%, rgba(244,199,107,0.8) 0%, transparent 100%),
-              radial-gradient(1px 1px at 50% 20%, rgba(244,199,107,0.6) 0%, transparent 100%),
-              radial-gradient(1px 1px at 80% 15%, rgba(244,199,107,0.7) 0%, transparent 100%),
-              radial-gradient(1px 1px at 30% 30%, rgba(244,199,107,0.5) 0%, transparent 100%),
-              radial-gradient(1px 1px at 60% 35%, rgba(244,199,107,0.6) 0%, transparent 100%),
-              radial-gradient(1px 1px at 40% 45%, rgba(244,199,107,0.7) 0%, transparent 100%),
-              radial-gradient(1px 1px at 70% 50%, rgba(244,199,107,0.5) 0%, transparent 100%),
-              radial-gradient(1px 1px at 25% 60%, rgba(244,199,107,0.6) 0%, transparent 100%),
-              radial-gradient(1px 1px at 55% 65%, rgba(244,199,107,0.8) 0%, transparent 100%),
-              radial-gradient(1px 1px at 45% 75%, rgba(244,199,107,0.5) 0%, transparent 100%),
-              radial-gradient(1px 1px at 65% 80%, rgba(244,199,107,0.6) 0%, transparent 100%),
-              radial-gradient(1px 1px at 35% 90%, rgba(244,199,107,0.7) 0%, transparent 100%)
-            `,
-            animation: 'sparkleFloat 8s linear infinite',
-            pointerEvents: 'none', zIndex: 18,
-          }} />
-        )}
-
-        {/* ═══════════════════════════════════════
-             LAYER 2: CINEMATIC LOGO REVEAL
-            ═══════════════════════════════════════ */}
-
-        {/* Pre-reveal: Light bloom behind curtain gap — appears BEFORE logo */}
-        <div style={{
-          position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
-          width: `${120 + lightLeak * 300}px`, height: `${120 + lightLeak * 300}px`,
-          borderRadius: '50%',
-          background: `radial-gradient(circle,
-            rgba(244,199,107,${0.08 * lightLeak * (0.8 + breath * 0.2)}) 0%,
-            rgba(244,199,107,${0.03 * lightLeak}) 40%,
-            transparent 70%
-          )`,
-          filter: 'blur(40px)',
-          pointerEvents: 'none', zIndex: 8,
-          opacity: logoFade,
-        }} />
-
-        {/* Pre-reveal: Vertical light beam — golden rain from reference */}
-        <div style={{
-          position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)',
-          width: `${4 + logoGlow * 80}px`, height: '60%',
-          background: `linear-gradient(to bottom,
-            rgba(255,230,170,${0.06 * logoGlow * (0.7 + breath * 0.3)}) 0%,
-            rgba(244,199,107,${0.04 * logoGlow}) 40%,
-            rgba(244,199,107,${0.02 * logoGlow}) 70%,
-            transparent 100%
-          )`,
-          filter: 'blur(8px)',
-          pointerEvents: 'none', zIndex: 8,
-          opacity: logoFade,
-        }} />
-
-        {/* Logo container — the reveal */}
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 10,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-          opacity: logoReveal * logoFade,
-          transform: `scale(${logoScale})`,
-          pointerEvents: 'none',
-          transition: 'opacity 0.3s ease',
-        }}>
-
-          {/* Reactive particle field — responds to logo presence */}
-          <div style={{
-            position: 'absolute', width: '400px', height: '400px',
-            pointerEvents: 'none',
-            opacity: logoReveal * 0.5 * (0.6 + breath * 0.4),
+        {/* ═══ CURTAINS ═══ */}
+        {['left', 'right'].map(side => (
+          <div key={side} data-c={side === 'left' ? 'l' : 'r'} style={{
+            position: 'absolute', top: 0, [side]: 0,
+            width: '52%', height: '100%', zIndex: 20,
+            transformOrigin: side === 'left' ? 'left center' : 'right center',
+            willChange: 'transform',
           }}>
-            {Array.from({ length: 20 }).map((_, i) => {
-              const angle = (i / 20) * Math.PI * 2
-              const dist = 120 + (i % 3) * 40
-              const size = 1 + (i % 2)
-              return (
-                <div key={i} style={{
-                  position: 'absolute',
-                  left: `${50 + Math.cos(angle) * (dist / 4)}%`,
-                  top: `${50 + Math.sin(angle) * (dist / 4)}%`,
-                  width: `${size}px`, height: `${size}px`,
-                  borderRadius: '50%',
-                  background: `rgba(244,199,107,${0.3 + (i % 3) * 0.2})`,
-                  boxShadow: `0 0 ${size * 3}px rgba(244,199,107,0.15)`,
-                  animation: `particleOrbit ${12 + i * 0.7}s linear infinite`,
-                  animationDelay: `${-i * 0.6}s`,
-                }} />
-              )
-            })}
-          </div>
-
-          {/* Outer glow halo — breathes */}
-          <div style={{
-            position: 'absolute',
-            width: `${220 + breath * 20}px`, height: `${220 + breath * 20}px`,
-            borderRadius: '50%',
-            background: `radial-gradient(circle,
-              rgba(244,199,107,${0.06 + breath * 0.03}) 0%,
-              rgba(244,199,107,${0.02 + breath * 0.01}) 50%,
-              transparent 70%
-            )`,
-            filter: 'blur(20px)',
-            pointerEvents: 'none',
-          }} />
-
-          {/* Logo — fully transparent PNG, no circle clip needed */}
-          <div style={{
-            width: '200px', height: '200px',
-            transform: `rotate(${logoRotation}deg)`,
-            filter: `drop-shadow(0 0 30px rgba(244,199,107,${0.15 + breath * 0.1})) drop-shadow(0 0 60px rgba(244,199,107,${0.05 + breath * 0.03}))`,
-          }}>
-            <img src="/logo.png" alt="AYMEDO" style={{
-              width: '100%', height: '100%', objectFit: 'contain',
-              opacity: 0.95,
+            <div style={{
+              position: 'absolute', inset: 0,
+              backgroundImage: 'url(/images/curtain-closed.jpg)',
+              backgroundSize: 'cover',
+              backgroundPosition: side === 'left' ? 'right center' : 'left center',
+            }} />
+            <div style={{
+              position: 'absolute', top: 0, bottom: 0,
+              [side === 'left' ? 'right' : 'left']: 0,
+              width: '80px',
+              background: `linear-gradient(${side === 'left' ? '270deg' : '90deg'}, transparent, rgba(0,0,0,0.8))`,
+              pointerEvents: 'none',
             }} />
           </div>
+        ))}
 
+        {/* Sparkle rain */}
+        <div data-sparkle style={{
+          position: 'absolute', top: '5%', left: '45%', width: '10%', height: '80%',
+          opacity: 0,
+          background: `
+            radial-gradient(1px 1px at 20% 10%, rgba(244,199,107,0.8) 0%, transparent 100%),
+            radial-gradient(1px 1px at 50% 20%, rgba(244,199,107,0.6) 0%, transparent 100%),
+            radial-gradient(1px 1px at 80% 15%, rgba(244,199,107,0.7) 0%, transparent 100%),
+            radial-gradient(1px 1px at 30% 30%, rgba(244,199,107,0.5) 0%, transparent 100%),
+            radial-gradient(1px 1px at 60% 35%, rgba(244,199,107,0.6) 0%, transparent 100%),
+            radial-gradient(1px 1px at 45% 75%, rgba(244,199,107,0.5) 0%, transparent 100%)
+          `,
+          animation: 'sparkleFloat 8s linear infinite',
+          pointerEvents: 'none', zIndex: 18,
+        }} />
+
+        {/* ═══ LOGO ═══ */}
+        <div data-ll style={{
+          position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
+          borderRadius: '50%', filter: 'blur(40px)',
+          pointerEvents: 'none', zIndex: 8,
+        }} />
+
+        <div data-logo style={{
+          position: 'absolute', inset: 0, zIndex: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none', willChange: 'transform, opacity',
+        }}>
+          <div data-logo-img style={{ width: '200px', height: '200px', willChange: 'transform' }}>
+            <img src="/logo.png" alt="AYMEDO" style={{ width: '100%', height: '100%', objectFit: 'contain', opacity: 0.95 }} />
+          </div>
         </div>
 
-        {/* ═══ AYMEDO TEXT + CONTACT — bottom left ═══ */}
-        <div style={{
+        {/* Logo text — bottom left */}
+        <div data-logo-text style={{
           position: 'absolute', bottom: '28px', left: '28px', zIndex: 10,
-          opacity: logoReveal * logoFade,
-          transform: `translateY(${(1 - logoReveal) * 20}px)`,
-          pointerEvents: logoReveal > 0.5 && logoFade > 0.5 ? 'auto' : 'none',
           display: 'flex', flexDirection: 'column', gap: '10px',
+          pointerEvents: 'auto',
         }}>
-          <div style={{
-            fontSize: '22px', fontWeight: 200, letterSpacing: '0.8em',
-            color: '#F4C76B',
-            textShadow: `0 0 20px rgba(244,199,107,${0.12 + breath * 0.08})`,
-            animation: 'textGlow 4s ease-in-out infinite',
-          }}>AYMEDO</div>
-
-          <div style={{ width: '35px', height: '1px', background: `rgba(244,199,107,${0.18 + breath * 0.08})` }} />
-
+          <div style={{ fontSize: '22px', fontWeight: 200, letterSpacing: '0.8em', color: '#F4C76B', animation: 'textGlow 4s ease-in-out infinite' }}>AYMEDO</div>
+          <div style={{ width: '35px', height: '1px', background: 'rgba(244,199,107,0.2)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* Mail icon */}
-            <svg width="14" height="11" viewBox="0 0 24 18" fill="none" style={{ opacity: 0.5 + breath * 0.15, flexShrink: 0 }}>
+            <svg width="14" height="11" viewBox="0 0 24 18" fill="none">
               <rect x="1" y="1" width="22" height="16" rx="2" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
               <path d="M1 1 L12 10 L23 1" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
             </svg>
-            <a href="mailto:ola@aymedo.io" style={{
-              fontSize: '11px', fontWeight: 300, letterSpacing: '0.2em',
-              color: `rgba(244,199,107,${0.65 + breath * 0.15})`,
-              textDecoration: 'none',
-              textShadow: `0 0 12px rgba(244,199,107,${0.08 + breath * 0.05})`,
-              animation: 'emailPulse 3s ease-in-out infinite',
-            }}>ola@aymedo.io</a>
+            <a href="mailto:ola@aymedo.io" style={{ fontSize: '11px', fontWeight: 300, letterSpacing: '0.2em', color: 'rgba(244,199,107,0.7)', textDecoration: 'none', animation: 'emailPulse 3s ease-in-out infinite' }}>ola@aymedo.io</a>
           </div>
-
-          <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.3)' }}>
-            FOR COLLABORATIONS
-          </div>
+          <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.3)' }}>FOR COLLABORATIONS</div>
         </div>
 
-        {/* ═══ SCROLL-DRIVEN VIDEO — The Journey ═══ */}
-        {/* Black screen slowly reveals video — like entering a dream */}
-        <div style={{
-          position: 'absolute', inset: 0, zIndex: 9,
-          opacity: videoFade,
-          pointerEvents: 'none',
+        {/* ═══ SCROLL VIDEO ═══ */}
+        <div data-vlayer style={{
+          position: 'absolute', inset: 0, zIndex: 9, pointerEvents: 'none',
         }}>
-          {/* Video — original aspect ratio, no crop, no zoom */}
-          <video
-            ref={cinematicRef}
-            muted
-            playsInline
-            preload="auto"
-            style={{
-              position: 'absolute',
-              top: '50%', left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '100%', height: '100%',
-              objectFit: 'contain',
-              opacity: videoFadeIn,
-              filter: 'none',
-            }}
-          >
+          <video ref={cinematicRef} muted playsInline preload="auto"
+            style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '100%', height: '100%', objectFit: 'contain', willChange: 'opacity' }}>
             <source src="/videos/cinematic.mp4" type="video/mp4" />
           </video>
-
-          {/* Subtle cinematic letterbox — very thin */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '5%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)', pointerEvents: 'none', zIndex: 1 }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '5%', background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)', pointerEvents: 'none', zIndex: 1 }} />
-
-          {/* Minimal progress line — barely visible, just a hint */}
-          <div style={{
-            position: 'absolute', bottom: '3%', left: '25%', width: '50%', height: '1px',
-            background: 'rgba(255,255,255,0.06)', zIndex: 2,
-            opacity: videoFadeIn,
-          }}>
-            <div style={{
-              width: `${videoProgress * 100}%`, height: '100%',
-              background: `rgba(244,199,107,${0.3 + breath * 0.1})`,
-              boxShadow: `0 0 6px rgba(244,199,107,${0.1 + breath * 0.05})`,
-            }} />
+          <div style={{ position: 'absolute', bottom: '3%', left: '25%', width: '50%', height: '1px', background: 'rgba(255,255,255,0.06)', zIndex: 2 }}>
+            <div data-vprog style={{ width: '0%', height: '100%', background: 'rgba(244,199,107,0.3)', boxShadow: '0 0 6px rgba(244,199,107,0.1)' }} />
           </div>
 
-          {/* ═══ SCROLL-DRIVEN B&W STRIPES — opposite sides, scroll-linked ═══ */}
+          {/* Side panels */}
           {(() => {
-            // Scroll position drives the stripe offset — each scroll step flips bands
-            const stripeOffset = videoProgress * 2000 // pixels of movement
-            const bandSize = 120 // px per band
-
+            const bandSize = 120
             return <>
-              {/* Left panel */}
-              <div style={{
-                position: 'absolute', top: 0, left: 0, bottom: 0,
-                width: 'calc((100vw - 56.25vh) / 2)',
-                minWidth: '40px',
-                overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
-                opacity: videoFadeIn,
-              }}>
-                {/* Scroll-driven black/white bands — moves DOWN with scroll */}
-                <div style={{
-                  position: 'absolute', left: 0, right: 0,
-                  top: `-${bandSize}px`,
-                  height: `calc(100% + ${bandSize * 4}px)`,
-                  background: `repeating-linear-gradient(180deg,
-                    rgba(240,235,225,0.08) 0px,
-                    rgba(240,235,225,0.08) ${bandSize}px,
-                    rgba(5,5,5,0.95) ${bandSize}px,
-                    rgba(5,5,5,0.95) ${bandSize * 2}px
-                  )`,
-                  transform: `translateY(${stripeOffset % (bandSize * 2)}px)`,
+              <div data-panel style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 'calc((100vw - 56.25vh) / 2)', minWidth: '40px', overflow: 'hidden', zIndex: 3, pointerEvents: 'none' }}>
+                <div data-stripe-l style={{ position: 'absolute', left: 0, right: 0, top: `-${bandSize}px`, height: `calc(100% + ${bandSize * 4}px)`,
+                  background: `repeating-linear-gradient(180deg, rgba(240,235,225,0.08) 0px, rgba(240,235,225,0.08) ${bandSize}px, rgba(5,5,5,0.95) ${bandSize}px, rgba(5,5,5,0.95) ${bandSize * 2}px)`,
+                  willChange: 'transform',
                 }} />
-                {/* Soft edge toward video */}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(5,3,2,0.95))' }} />
-                {/* Text overlay — HORIZONTAL */}
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: '20px', opacity: 0.5 + breath * 0.2,
-                }}>
-                  <div style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(244,199,107,0.7)', textAlign: 'center', animation: 'textGlow 4s ease-in-out infinite' }}>
-                    YOU ARE<br/>ALMOST<br/>THERE
-                  </div>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(244,199,107,0.7)', textAlign: 'center', animation: 'textGlow 4s ease-in-out infinite' }}>YOU ARE<br/>ALMOST<br/>THERE</div>
                   <div style={{ animation: 'scrollBounce 2s ease-in-out infinite' }}>
                     <svg width="24" height="60" viewBox="0 0 24 60" fill="none">
                       <path d="M12 0 L12 50" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" />
                       <path d="M4 42 L12 54 L20 42" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M7 36 L12 44 L17 36" stroke="rgba(244,199,107,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>
               </div>
-
-              {/* Right panel — OPPOSITE: moves UP when left moves DOWN */}
-              <div style={{
-                position: 'absolute', top: 0, right: 0, bottom: 0,
-                width: 'calc((100vw - 56.25vh) / 2)',
-                minWidth: '40px',
-                overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
-                opacity: videoFadeIn,
-              }}>
-                {/* Opposite direction bands — moves UP */}
-                <div style={{
-                  position: 'absolute', left: 0, right: 0,
-                  top: `-${bandSize}px`,
-                  height: `calc(100% + ${bandSize * 4}px)`,
-                  background: `repeating-linear-gradient(180deg,
-                    rgba(5,5,5,0.95) 0px,
-                    rgba(5,5,5,0.95) ${bandSize}px,
-                    rgba(240,235,225,0.08) ${bandSize}px,
-                    rgba(240,235,225,0.08) ${bandSize * 2}px
-                  )`,
-                  transform: `translateY(-${stripeOffset % (bandSize * 2)}px)`,
+              <div data-panel style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 'calc((100vw - 56.25vh) / 2)', minWidth: '40px', overflow: 'hidden', zIndex: 3, pointerEvents: 'none' }}>
+                <div data-stripe-r style={{ position: 'absolute', left: 0, right: 0, top: `-${bandSize}px`, height: `calc(100% + ${bandSize * 4}px)`,
+                  background: `repeating-linear-gradient(180deg, rgba(5,5,5,0.95) 0px, rgba(5,5,5,0.95) ${bandSize}px, rgba(240,235,225,0.08) ${bandSize}px, rgba(240,235,225,0.08) ${bandSize * 2}px)`,
+                  willChange: 'transform',
                 }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, transparent 60%, rgba(5,3,2,0.95))' }} />
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: '20px', opacity: 0.5 + breath * 0.2,
-                }}>
-                  <div style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(244,199,107,0.7)', textAlign: 'center', animation: 'textGlow 4s ease-in-out infinite', animationDelay: '2s' }}>
-                    KEEP<br/>SCROLLING
-                  </div>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '20px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(244,199,107,0.7)', textAlign: 'center', animation: 'textGlow 4s ease-in-out infinite', animationDelay: '2s' }}>KEEP<br/>SCROLLING</div>
                   <div style={{ animation: 'scrollBounce 2s ease-in-out infinite', animationDelay: '0.5s' }}>
                     <svg width="24" height="60" viewBox="0 0 24 60" fill="none">
                       <path d="M12 0 L12 50" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" />
                       <path d="M4 42 L12 54 L20 42" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M7 36 L12 44 L17 36" stroke="rgba(244,199,107,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>
               </div>
             </>
           })()}
-
         </div>
 
-        {/* ═══ INFINITY SYMBOL — top center of cinema ═══ */}
-        {cinemaReveal > 0.2 && (
-          <div style={{
-            position: 'absolute', top: '2%', left: '50%', transform: 'translateX(-50%)',
-            zIndex: 8, opacity: cinemaReveal * 0.5 * (0.7 + breath * 0.3),
-            pointerEvents: 'none',
-          }}>
-            <svg width="36" height="18" viewBox="0 0 60 30" fill="none" style={{
-              filter: `drop-shadow(0 0 8px rgba(244,199,107,${0.15 + breath * 0.08}))`,
-            }}>
-              <path d="M15 15 C15 8 5 3 5 15 C5 27 15 22 15 15 Z" stroke="#F4C76B" strokeWidth="1" fill="none" opacity={0.5 + breath * 0.2} />
-              <path d="M15 15 C15 22 25 27 25 15 C25 3 15 8 15 15 Z" stroke="#F4C76B" strokeWidth="1" fill="none" opacity={0.5 + breath * 0.2} transform="translate(20, 0)" />
-              <path d="M15 15 Q20 5 45 15 Q20 25 15 15" stroke="#F4C76B" strokeWidth="0.8" fill="none" opacity={0.35 + breath * 0.15} />
-            </svg>
-          </div>
-        )}
+        {/* ═══ INFINITY ═══ */}
+        <div data-inf style={{
+          position: 'absolute', top: '2%', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 8, opacity: 0, pointerEvents: 'none',
+        }}>
+          <svg width="36" height="18" viewBox="0 0 60 30" fill="none" style={{ filter: 'drop-shadow(0 0 8px rgba(244,199,107,0.15))' }}>
+            <path d="M15 15 C15 8 5 3 5 15 C5 27 15 22 15 15 Z" stroke="#F4C76B" strokeWidth="1" fill="none" />
+            <path d="M15 15 C15 22 25 27 25 15 C25 3 15 8 15 15 Z" stroke="#F4C76B" strokeWidth="1" fill="none" transform="translate(20, 0)" />
+          </svg>
+        </div>
 
-        {/* ═══════════════════════════════════════
-             LAYER 3: 4 CINEMA SCREENS
-            ═══════════════════════════════════════ */}
-        <div style={{
+        {/* ═══ 4 CINEMA SCREENS ═══ */}
+        <div data-cinema style={{
           position: 'absolute',
           top: isFS ? 0 : '6%', left: isFS ? 0 : '6%', right: isFS ? 0 : '6%', bottom: isFS ? 0 : '14%',
           display: 'grid',
           gridTemplateColumns: isFS ? '1fr' : '1fr 1fr',
           gridTemplateRows: isFS ? '1fr' : '1fr 1fr',
           gap: isFS ? 0 : '16px',
-          opacity: cinemaReveal,
-          transform: `scale(${isFS ? 1 : 0.92 + cinemaReveal * 0.08})`,
+          opacity: 0,
           transition: isFS ? 'all 0.9s cubic-bezier(0.16, 1, 0.3, 1)' : 'none',
-          zIndex: 5,
-          pointerEvents: cinemaReady ? 'auto' : 'none',
+          zIndex: 5, willChange: 'opacity, transform',
         }}>
           {SCREENS.map((screen, idx) => {
             const isHov = hovered === screen.id
@@ -657,55 +466,31 @@ export default function Theatre() {
                 onMouseLeave={() => setHovered(null)}
                 onClick={() => goFS(screen.id)}
                 style={{
-                  position: 'relative', overflow: 'hidden',
-                  cursor: cinemaReady ? 'pointer' : 'default',
+                  position: 'relative', overflow: 'hidden', cursor: 'pointer',
                   borderRadius: isThisFS ? 0 : '10px',
                   opacity: isHidden ? 0 : 1,
                   display: isHidden ? 'none' : 'block',
                   gridColumn: isThisFS ? '1 / -1' : undefined,
                   gridRow: isThisFS ? '1 / -1' : undefined,
-                  transition: isFS ? 'all 0.9s cubic-bezier(0.16, 1, 0.3, 1)' : 'all 0.5s ease',
+                  transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
                   transform: isHov && !isFS ? 'scale(1.01)' : 'scale(1)',
                 }}
               >
-                {/* Glass frame — thick, water-animated */}
-                {!isThisFS && (
-                  <div style={{
-                    position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none',
-                    borderRadius: '10px',
-                    border: `3px solid rgba(255,255,255,${isHov ? 0.15 : 0.06})`,
-                    boxShadow: `
-                      inset 0 0 25px rgba(160,190,240,0.03),
-                      inset 0 1px 0 rgba(255,255,255,${isHov ? 0.1 : 0.04}),
-                      0 0 ${isHov ? 40 : 15}px rgba(80,120,180,0.05)
-                    `,
-                    animation: `waterWave ${6 + idx}s ease-in-out infinite`,
-                  }} />
-                )}
+                {/* Glass frame */}
+                {!isThisFS && <div style={{
+                  position: 'absolute', inset: 0, zIndex: 3, pointerEvents: 'none', borderRadius: '10px',
+                  border: `3px solid rgba(255,255,255,${isHov ? 0.15 : 0.06})`,
+                  boxShadow: `inset 0 0 25px rgba(160,190,240,0.03), 0 0 ${isHov ? 40 : 15}px rgba(80,120,180,0.05)`,
+                  animation: `waterWave ${6 + idx}s ease-in-out infinite`,
+                }} />}
 
-                {/* Top caustic light — slides across like water */}
-                {!isThisFS && (
-                  <div style={{
-                    position: 'absolute', top: 0, left: '5%', right: '5%', height: '4px',
-                    background: `linear-gradient(90deg, transparent, rgba(255,255,255,${0.08 + breath * 0.04}), transparent)`,
-                    borderRadius: '10px 10px 0 0', zIndex: 4, pointerEvents: 'none',
-                    animation: `causticSlide ${8 + idx}s ease-in-out infinite`,
-                  }} />
-                )}
-
-                {/* Frosted glass edges */}
-                {!isThisFS && (
-                  <div style={{
-                    position: 'absolute', inset: 0, zIndex: 2, pointerEvents: 'none', borderRadius: '10px',
-                    background: `
-                      linear-gradient(to right, rgba(180,200,240,0.06) 0%, transparent 12%),
-                      linear-gradient(to left, rgba(180,200,240,0.06) 0%, transparent 12%),
-                      linear-gradient(to bottom, rgba(200,210,250,0.07) 0%, transparent 10%),
-                      linear-gradient(to top, rgba(180,190,230,0.08) 0%, transparent 15%)
-                    `,
-                    animation: `glassShimmer ${7 + idx * 0.5}s ease-in-out infinite`,
-                  }} />
-                )}
+                {/* Caustic light */}
+                {!isThisFS && <div style={{
+                  position: 'absolute', top: 0, left: '5%', right: '5%', height: '4px',
+                  background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)',
+                  borderRadius: '10px 10px 0 0', zIndex: 4, pointerEvents: 'none',
+                  animation: `causticSlide ${8 + idx}s ease-in-out infinite`,
+                }} />}
 
                 {/* Video */}
                 <video ref={el => { if (el) videoRefs.current[screen.id] = el }}
@@ -714,53 +499,34 @@ export default function Theatre() {
                     position: 'absolute', inset: 0,
                     width: '100%', height: '100%', objectFit: 'cover',
                     borderRadius: isThisFS ? 0 : '10px',
-                    imageRendering: 'auto',
                     transform: `scale(${isHov && !isFS ? 1.04 : 1.0})`,
-                    filter: `brightness(${isThisFS ? 1.05 : isHov ? 1.0 : isDimmed ? 0.15 : 0.7}) saturate(${isThisFS ? 1.1 : isHov ? 1.15 : 1.0}) contrast(${isHov ? 1.05 : 1.0})`,
+                    filter: `brightness(${isThisFS ? 1.05 : isHov ? 1.0 : isDimmed ? 0.15 : 0.7}) saturate(${isHov ? 1.15 : 1.0})`,
                     transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >
                   <source src={screen.src} type="video/mp4" />
                 </video>
 
-                {/* Hover vignette */}
-                {isHov && !isFS && <div style={{ position: 'absolute', inset: 0, borderRadius: '10px', background: 'radial-gradient(ellipse, transparent 55%, rgba(0,0,0,0.25) 100%)', pointerEvents: 'none', zIndex: 1 }} />}
-
-                {/* FS letterbox */}
-                {isThisFS && <>
-                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6%', background: 'linear-gradient(to bottom, rgba(2,1,1,0.6), transparent)', pointerEvents: 'none', zIndex: 3 }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '6%', background: 'linear-gradient(to top, rgba(2,1,1,0.6), transparent)', pointerEvents: 'none', zIndex: 3 }} />
-                </>}
-
-                {/* Word — bottom right corner of each screen */}
-                <div style={{
-                  position: 'absolute', bottom: isThisFS ? '16px' : '8px', right: isThisFS ? '60px' : '44px',
-                  zIndex: 4, pointerEvents: 'none',
-                }}>
+                {/* Word — bottom right */}
+                <div style={{ position: 'absolute', bottom: isThisFS ? '16px' : '8px', right: isThisFS ? '60px' : '44px', zIndex: 4, pointerEvents: 'none' }}>
                   <span style={{
-                    fontSize: isThisFS ? '16px' : '10px',
-                    fontWeight: 300,
-                    letterSpacing: '0.35em',
+                    fontSize: isThisFS ? '16px' : '10px', fontWeight: 300, letterSpacing: '0.35em',
                     color: `rgba(247,241,232,${isHov || isThisFS ? 0.6 : 0.2})`,
-                    textShadow: '0 1px 12px rgba(0,0,0,0.9)',
-                    transition: 'all 0.6s ease',
-                  }}>
-                    {screen.word}
-                  </span>
+                    textShadow: '0 1px 12px rgba(0,0,0,0.9)', transition: 'all 0.6s ease',
+                  }}>{screen.word}</span>
                 </div>
 
                 {/* Audio button */}
                 <button onClick={e => toggleAudio(screen.id, e)} style={{
                   position: 'absolute', bottom: isThisFS ? '20px' : '8px', right: isThisFS ? '24px' : '10px',
-                  zIndex: 5, width: isThisFS ? '38px' : '30px', height: isThisFS ? '38px' : '30px',
+                  zIndex: 5, width: '30px', height: '30px',
                   border: `2px solid rgba(255,255,255,${isHov || isThisFS ? 0.2 : 0.08})`,
                   borderRadius: '50%',
                   background: isAct ? 'rgba(244,199,107,0.15)' : 'rgba(255,255,255,0.04)',
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                   backdropFilter: 'blur(8px)', transition: 'all 0.4s ease',
-                  boxShadow: isAct ? '0 0 15px rgba(244,199,107,0.15)' : 'none',
                 }}>
-                  <svg width={isThisFS ? '14' : '11'} height={isThisFS ? '14' : '11'} viewBox="0 0 24 24" fill="none" stroke={isAct ? '#F4C76B' : '#F7F1E8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={isAct ? '#F4C76B' : '#F7F1E8'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                     {isAct ? <><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></>
                      : <><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></>}
@@ -768,56 +534,40 @@ export default function Theatre() {
                 </button>
 
                 {isThisFS && <div style={{ position: 'absolute', top: '16px', right: '20px', zIndex: 5, opacity: 0.3 }}><span style={{ fontSize: '9px', fontWeight: 200, letterSpacing: '0.3em', color: '#F7F1E8' }}>ESC</span></div>}
-                {isAct && !isFS && <div style={{ position: 'absolute', inset: 0, border: '1px solid rgba(244,199,107,0.1)', borderRadius: '10px', pointerEvents: 'none', zIndex: 3 }} />}
               </div>
             )
           })}
         </div>
 
-        {/* ═══ BOTTOM: Logo + Mail (cinema phase) ═══ */}
-        {!isFS && cinemaReveal > 0 && (
-          <div style={{
+        {/* Cinema bottom */}
+        {!isFS && (
+          <div data-cbot style={{
             position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-            zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
-            opacity: cinemaReveal,
+            zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', opacity: 0,
           }}>
-            <img src="/logo.png" alt="" style={{
-              width: '34px', height: '34px', objectFit: 'contain', opacity: 0.8,
-              filter: `drop-shadow(0 0 10px rgba(244,199,107,${0.08 + breath * 0.05}))`,
-            }} />
-            <span style={{ fontSize: '9px', fontWeight: 200, letterSpacing: '0.6em', color: '#F4C76B', opacity: 0.5 + breath * 0.15, animation: 'textGlow 4s ease-in-out infinite' }}>AYMEDO</span>
-            {/* Mail — big, prominent, with icon */}
-            <a href="mailto:ola@aymedo.io" style={{
-              display: 'flex', alignItems: 'center', gap: '8px',
-              textDecoration: 'none', cursor: 'pointer',
-              marginTop: '4px',
-            }}>
-              <svg width="18" height="14" viewBox="0 0 24 18" fill="none" style={{ opacity: 0.6 + breath * 0.2, flexShrink: 0 }}>
+            <img src="/logo.png" alt="" style={{ width: '34px', height: '34px', objectFit: 'contain', opacity: 0.8, filter: 'drop-shadow(0 0 10px rgba(244,199,107,0.08))' }} />
+            <span style={{ fontSize: '9px', fontWeight: 200, letterSpacing: '0.6em', color: '#F4C76B', opacity: 0.6, animation: 'textGlow 4s ease-in-out infinite' }}>AYMEDO</span>
+            <a href="mailto:ola@aymedo.io" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', marginTop: '4px' }}>
+              <svg width="18" height="14" viewBox="0 0 24 18" fill="none">
                 <rect x="1" y="1" width="22" height="16" rx="2" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
                 <path d="M1 1 L12 10 L23 1" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
               </svg>
-              <span style={{
-                fontSize: '13px', fontWeight: 300, letterSpacing: '0.25em',
-                color: `rgba(244,199,107,${0.7 + breath * 0.15})`,
-                textShadow: `0 0 15px rgba(244,199,107,${0.1 + breath * 0.06})`,
-                animation: 'emailPulse 3s ease-in-out infinite',
-              }}>ola@aymedo.io</span>
+              <span style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.25em', color: 'rgba(244,199,107,0.8)', animation: 'emailPulse 3s ease-in-out infinite' }}>ola@aymedo.io</span>
             </a>
           </div>
         )}
 
-        {/* Scroll indicator — bigger, more visible */}
-        <div style={{
+        {/* Scroll indicator */}
+        <div data-scroll style={{
           position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
           zIndex: 25, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
-          opacity: scrollHint, pointerEvents: 'none',
+          pointerEvents: 'none',
         }}>
           <span style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.7)', animation: 'textGlow 3s ease-in-out infinite' }}>SCROLL DOWN</span>
           <div style={{ animation: 'scrollBounce 1.8s ease-in-out infinite' }}>
             <svg width="28" height="50" viewBox="0 0 28 50" fill="none">
               <path d="M14 2 L14 40" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" />
               <path d="M6 32 L14 44 L22 32" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M9 26 L14 34 L19 26" stroke="rgba(244,199,107,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
         </div>
@@ -828,19 +578,12 @@ export default function Theatre() {
 
       <style>{`
         @keyframes scrollBounce{0%,100%{transform:translateY(0);opacity:0.5}50%{transform:translateY(8px);opacity:1}}
-        @keyframes hypnoSlide{0%{background-position:0 0}100%{background-position:0 320px}}
-        @keyframes logoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
-        @keyframes textGlow{0%,100%{opacity:0.65;text-shadow:0 0 10px rgba(244,199,107,0.1)}50%{opacity:1;text-shadow:0 0 25px rgba(244,199,107,0.3)}}
-        @keyframes audioPulse{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.3)}}
-        @keyframes waterWave{
-          0%,100%{border-color:rgba(255,255,255,0.05);box-shadow:inset 0 0 20px rgba(160,190,240,0.02),0 0 15px rgba(80,120,180,0.03)}
-          50%{border-color:rgba(200,220,255,0.1);box-shadow:inset 0 0 30px rgba(160,190,240,0.04),0 0 30px rgba(80,120,180,0.05)}
-        }
-        @keyframes glassShimmer{0%,100%{opacity:0.7}50%{opacity:1}}
+        @keyframes textGlow{0%,100%{opacity:0.65}50%{opacity:1}}
+        @keyframes waterWave{0%,100%{border-color:rgba(255,255,255,0.05)}50%{border-color:rgba(200,220,255,0.1)}}
         @keyframes causticSlide{0%{transform:translateX(-30%);opacity:0.3}50%{transform:translateX(30%);opacity:0.8}100%{transform:translateX(-30%);opacity:0.3}}
         @keyframes sparkleFloat{0%{transform:translateY(0)}100%{transform:translateY(30px)}}
-        @keyframes particleOrbit{0%{transform:rotate(0deg) translateX(8px) rotate(0deg)}100%{transform:rotate(360deg) translateX(8px) rotate(-360deg)}}
-        @keyframes emailPulse{0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 10px rgba(244,199,107,0.08)}50%{opacity:1;transform:scale(1.02);text-shadow:0 0 25px rgba(244,199,107,0.2)}}
+        @keyframes emailPulse{0%,100%{opacity:0.75}50%{opacity:1}}
+        @keyframes phoneRotate{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-90deg)}}
         ::-webkit-scrollbar{display:none}
         html{scrollbar-width:none}
         ::selection{background:#F4C76B;color:#050505}
