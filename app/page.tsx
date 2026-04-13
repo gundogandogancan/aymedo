@@ -791,17 +791,18 @@ export default function Theatre() {
           </div>
         )}
 
-        {/* Scroll indicator */}
+        {/* Scroll indicator — bigger, more visible */}
         <div style={{
-          position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 25, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+          position: 'absolute', bottom: '40px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 25, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px',
           opacity: scrollHint, pointerEvents: 'none',
         }}>
-          <span style={{ fontSize: '11px', fontWeight: 300, letterSpacing: '0.6em', color: 'rgba(247,241,232,0.5)' }}>SCROLL</span>
-          <div style={{ animation: 'scrollBounce 2s ease-in-out infinite' }}>
-            <svg width="16" height="24" viewBox="0 0 16 24" fill="none">
-              <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.5)" strokeWidth="1" strokeLinecap="round" />
-              <path d="M3 14 L8 20 L13 14" stroke="rgba(244,199,107,0.5)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+          <span style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.7)', animation: 'textGlow 3s ease-in-out infinite' }}>SCROLL DOWN</span>
+          <div style={{ animation: 'scrollBounce 1.8s ease-in-out infinite' }}>
+            <svg width="28" height="50" viewBox="0 0 28 50" fill="none">
+              <path d="M14 2 L14 40" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M6 32 L14 44 L22 32" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9 26 L14 34 L19 26" stroke="rgba(244,199,107,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
         </div>
