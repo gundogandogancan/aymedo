@@ -418,6 +418,59 @@ export default function Theatre() {
               boxShadow: `0 0 6px rgba(244,199,107,${0.1 + breath * 0.05})`,
             }} />
           </div>
+
+          {/* ═══ SIDE GUIDES — fill black bars with scroll encouragement ═══ */}
+
+          {/* Left side */}
+          <div style={{
+            position: 'absolute', top: 0, left: 0, bottom: 0,
+            width: 'calc((100vw - 56.25vh) / 2)', // black bar width for 9:16 video
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: '20px', zIndex: 3, pointerEvents: 'none',
+            opacity: videoFadeIn * (0.3 + breath * 0.15),
+          }}>
+            <div style={{
+              writingMode: 'vertical-rl', textOrientation: 'mixed',
+              fontSize: '11px', fontWeight: 200, letterSpacing: '0.5em',
+              color: 'rgba(244,199,107,0.4)',
+              animation: 'textGlow 4s ease-in-out infinite',
+            }}>
+              YOU ARE ALMOST THERE
+            </div>
+            <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite' }}>
+              <svg width="14" height="22" viewBox="0 0 16 24" fill="none">
+                <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.35)" strokeWidth="1" strokeLinecap="round" />
+                <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.35)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Right side */}
+          <div style={{
+            position: 'absolute', top: 0, right: 0, bottom: 0,
+            width: 'calc((100vw - 56.25vh) / 2)',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            gap: '20px', zIndex: 3, pointerEvents: 'none',
+            opacity: videoFadeIn * (0.3 + breath * 0.15),
+          }}>
+            <div style={{
+              writingMode: 'vertical-rl', textOrientation: 'mixed',
+              fontSize: '11px', fontWeight: 200, letterSpacing: '0.5em',
+              color: 'rgba(244,199,107,0.4)',
+              transform: 'rotate(180deg)',
+              animation: 'textGlow 4s ease-in-out infinite',
+              animationDelay: '2s',
+            }}>
+              KEEP SCROLLING
+            </div>
+            <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite', animationDelay: '0.5s' }}>
+              <svg width="14" height="22" viewBox="0 0 16 24" fill="none">
+                <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.35)" strokeWidth="1" strokeLinecap="round" />
+                <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.35)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          </div>
+
         </div>
 
         {/* ═══ INFINITY SYMBOL — top center of cinema ═══ */}
