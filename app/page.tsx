@@ -449,19 +449,20 @@ export default function Theatre() {
                 }} />
                 {/* Soft edge toward video */}
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(5,3,2,0.95))' }} />
-                {/* Text overlay */}
+                {/* Text overlay — HORIZONTAL */}
                 <div style={{
                   position: 'absolute', inset: 0,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: '14px', opacity: 0.4 + breath * 0.15,
+                  gap: '20px', opacity: 0.5 + breath * 0.2,
                 }}>
-                  <div style={{ writingMode: 'vertical-rl', fontSize: '9px', fontWeight: 200, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.5)', animation: 'textGlow 4s ease-in-out infinite' }}>
-                    YOU ARE ALMOST THERE
+                  <div style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(244,199,107,0.7)', textAlign: 'center', animation: 'textGlow 4s ease-in-out infinite' }}>
+                    YOU ARE<br/>ALMOST<br/>THERE
                   </div>
-                  <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite' }}>
-                    <svg width="12" height="18" viewBox="0 0 16 24" fill="none">
-                      <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" />
-                      <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <div style={{ animation: 'scrollBounce 2s ease-in-out infinite' }}>
+                    <svg width="24" height="60" viewBox="0 0 24 60" fill="none">
+                      <path d="M12 0 L12 50" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" />
+                      <path d="M4 42 L12 54 L20 42" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M7 36 L12 44 L17 36" stroke="rgba(244,199,107,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>
@@ -492,15 +493,16 @@ export default function Theatre() {
                 <div style={{
                   position: 'absolute', inset: 0,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  gap: '14px', opacity: 0.4 + breath * 0.15,
+                  gap: '20px', opacity: 0.5 + breath * 0.2,
                 }}>
-                  <div style={{ writingMode: 'vertical-rl', fontSize: '9px', fontWeight: 200, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.5)', transform: 'rotate(180deg)', animation: 'textGlow 4s ease-in-out infinite', animationDelay: '2s' }}>
-                    KEEP SCROLLING
+                  <div style={{ fontSize: '13px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(244,199,107,0.7)', textAlign: 'center', animation: 'textGlow 4s ease-in-out infinite', animationDelay: '2s' }}>
+                    KEEP<br/>SCROLLING
                   </div>
-                  <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite', animationDelay: '0.5s' }}>
-                    <svg width="12" height="18" viewBox="0 0 16 24" fill="none">
-                      <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" />
-                      <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                  <div style={{ animation: 'scrollBounce 2s ease-in-out infinite', animationDelay: '0.5s' }}>
+                    <svg width="24" height="60" viewBox="0 0 24 60" fill="none">
+                      <path d="M12 0 L12 50" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" />
+                      <path d="M4 42 L12 54 L20 42" stroke="rgba(244,199,107,0.6)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M7 36 L12 44 L17 36" stroke="rgba(244,199,107,0.3)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>
