@@ -29,8 +29,40 @@ export default function Theatre() {
   const [fullscreen, setFullscreen] = useState<string | null>(null)
   const [breath, setBreath] = useState(0)
   const [mouse, setMouse] = useState({ x: 0.5, y: 0.5 })
+  const [isPortrait, setIsPortrait] = useState(false)
+  const [rotatePhase, setRotatePhase] = useState(0)
   const videoRefs = useRef<Record<string, HTMLVideoElement>>({})
   const cinematicRef = useRef<HTMLVideoElement>(null)
+
+  // Detect portrait mode on mobile
+  useEffect(() => {
+    const check = () => {
+      const mobile = window.innerWidth < 768
+      const portrait = window.innerHeight > window.innerWidth
+      setIsPortrait(mobile && portrait)
+    }
+    check()
+    window.addEventListener('resize', check)
+    window.addEventListener('orientationchange', check)
+    return () => {
+      window.removeEventListener('resize', check)
+      window.removeEventListener('orientationchange', check)
+    }
+  }, [])
+
+  // Rotate phone animation
+  useEffect(() => {
+    if (!isPortrait) return
+    let id: number
+    let t = 0
+    const animate = () => {
+      t += 0.03
+      setRotatePhase(Math.sin(t) * 0.5 + 0.5)
+      id = requestAnimationFrame(animate)
+    }
+    id = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(id)
+  }, [isPortrait])
 
   // Scroll
   useEffect(() => {
@@ -130,6 +162,58 @@ export default function Theatre() {
 
   return (
     <div style={{ background: '#020101' }}>
+
+      {/* ═══ ROTATE PHONE OVERLAY ═══ */}
+      {isPortrait && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(2,1,1,0.97)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: '28px',
+          fontFamily: 'Inter, system-ui, sans-serif',
+        }}>
+          {/* Phone icon rotating */}
+          <div style={{
+            transform: `rotate(${-90 * rotatePhase}deg)`,
+            transition: 'none',
+            fontSize: '0',
+          }}>
+            <svg width="64" height="100" viewBox="0 0 64 100" fill="none">
+              <rect x="4" y="4" width="56" height="92" rx="10" stroke="#F4C76B" strokeWidth="2.5" fill="none" />
+              <circle cx="32" cy="86" r="4" stroke="#F4C76B" strokeWidth="1.5" fill="none" />
+              <rect x="22" y="10" width="20" height="3" rx="1.5" fill="rgba(244,199,107,0.3)" />
+            </svg>
+          </div>
+
+          {/* Rotating arrows around phone */}
+          <div style={{
+            opacity: 0.4 + rotatePhase * 0.4,
+          }}>
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <path d="M30 8 A16 16 0 0 1 36 20" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M33 6 L30 8 L33 11" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M10 32 A16 16 0 0 1 4 20" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" />
+              <path d="M7 34 L10 32 L7 29" stroke="#F4C76B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+
+          <div style={{
+            color: '#F4C76B', fontSize: '14px', fontWeight: 300,
+            letterSpacing: '0.35em', textAlign: 'center',
+            opacity: 0.7 + rotatePhase * 0.3,
+          }}>
+            ROTATE YOUR PHONE
+          </div>
+          <div style={{
+            color: 'rgba(247,241,232,0.35)', fontSize: '11px', fontWeight: 200,
+            letterSpacing: '0.2em', textAlign: 'center',
+          }}>
+            FOR THE BEST EXPERIENCE
+          </div>
+        </div>
+      )}
+
       <div style={{ height: '1200vh' }} />
 
       <div style={{
