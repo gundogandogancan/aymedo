@@ -357,24 +357,69 @@ export default function Theatre() {
             }}>AYMEDO</div>
           </div>
 
-          {/* Divider + contact — appears last */}
+          {/* Golden liquid glass triangle — mail inside */}
           <div style={{
-            opacity: Math.min(1, Math.max(0, (logoReveal - 0.6) / 0.4)),
-            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.6) / 0.4))) * 10}px)`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '22px',
+            opacity: Math.min(1, Math.max(0, (logoReveal - 0.5) / 0.4)),
+            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.5) / 0.4))) * 20}px)`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '30px',
+            pointerEvents: logoReveal > 0.6 && logoFade > 0.5 ? 'auto' : 'none',
           }}>
-            <div style={{ width: '50px', height: '1px', background: `rgba(244,199,107,${0.2 + breath * 0.1})` }} />
-            <div style={{ marginTop: '16px', fontSize: '9px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.4)', textAlign: 'center', lineHeight: '1.9' }}>
-              To learn more about life<br />and for collaborations
+            <div style={{ position: 'relative', width: '240px', height: '210px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              {/* Triangle — animated liquid glass */}
+              <svg width="240" height="210" viewBox="0 0 240 210" style={{ position: 'absolute', inset: 0, filter: `drop-shadow(0 0 25px rgba(244,199,107,${0.1 + breath * 0.06})) drop-shadow(0 0 60px rgba(244,199,107,${0.03 + breath * 0.02}))` }}>
+                <defs>
+                  <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor={`rgba(244,199,107,${0.15 + Math.sin(breath * Math.PI * 2) * 0.05})`} />
+                    <stop offset="50%" stopColor={`rgba(255,220,150,${0.08 + Math.cos(breath * Math.PI) * 0.03})`} />
+                    <stop offset="100%" stopColor={`rgba(244,199,107,${0.12 + Math.sin(breath * Math.PI * 2 + 1) * 0.04})`} />
+                  </linearGradient>
+                </defs>
+                <polygon points="120,10 230,195 10,195" fill="none" stroke={`rgba(244,199,107,${0.3 + breath * 0.12})`} strokeWidth="1.5" />
+                <polygon points="120,18 225,190 15,190" fill="url(#tg)" opacity={0.35 + breath * 0.1} />
+                <line x1={80 + Math.sin(breath * Math.PI * 2) * 15} y1={100} x2={160 - Math.cos(breath * Math.PI) * 12} y2={98} stroke={`rgba(255,240,200,${0.04 + breath * 0.02})`} strokeWidth="0.5" />
+                <line x1={60 + Math.cos(breath * Math.PI * 2) * 10} y1={145} x2={180 - Math.sin(breath * Math.PI) * 15} y2={148} stroke={`rgba(244,199,107,${0.03 + breath * 0.015})`} strokeWidth="0.5" />
+              </svg>
+
+              {/* Content inside triangle */}
+              <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '15px' }}>
+                {/* Mail icon */}
+                <svg width="20" height="16" viewBox="0 0 24 18" fill="none" style={{ marginBottom: '8px', opacity: 0.5 + breath * 0.2 }}>
+                  <rect x="1" y="1" width="22" height="16" rx="2" stroke="#F4C76B" strokeWidth="1" fill="none" opacity="0.4" />
+                  <path d="M1 1 L12 10 L23 1" stroke="#F4C76B" strokeWidth="1" fill="none" opacity="0.5" />
+                </svg>
+                <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.45)', textAlign: 'center', lineHeight: '1.7', marginBottom: '6px' }}>
+                  FOR COLLABORATIONS
+                </div>
+                <a href="mailto:ola@aymedo.io" style={{
+                  fontSize: '15px', fontWeight: 300, letterSpacing: '0.3em',
+                  color: `rgba(244,199,107,${0.75 + breath * 0.15})`,
+                  textDecoration: 'none',
+                  textShadow: `0 0 18px rgba(244,199,107,${0.12 + breath * 0.08})`,
+                  animation: 'emailPulse 3s ease-in-out infinite',
+                }}>
+                  ola@aymedo.io
+                </a>
+              </div>
             </div>
-            <a href="mailto:ola@aymedo.io" style={{
-              marginTop: '10px', fontSize: '11px', fontWeight: 300, letterSpacing: '0.25em',
-              color: `rgba(244,199,107,${0.55 + breath * 0.15})`,
-              textDecoration: 'none', borderBottom: '1px solid rgba(244,199,107,0.2)', paddingBottom: '3px',
-              pointerEvents: logoReveal > 0.5 && logoFade > 0.5 ? 'auto' : 'none',
-            }}>ola@aymedo.io</a>
           </div>
         </div>
+
+        {/* ═══ INFINITY SYMBOL — top center of cinema ═══ */}
+        {cinemaReveal > 0.2 && (
+          <div style={{
+            position: 'absolute', top: '2%', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 8, opacity: cinemaReveal * 0.5 * (0.7 + breath * 0.3),
+            pointerEvents: 'none',
+          }}>
+            <svg width="36" height="18" viewBox="0 0 60 30" fill="none" style={{
+              filter: `drop-shadow(0 0 8px rgba(244,199,107,${0.15 + breath * 0.08}))`,
+            }}>
+              <path d="M15 15 C15 8 5 3 5 15 C5 27 15 22 15 15 Z" stroke="#F4C76B" strokeWidth="1" fill="none" opacity={0.5 + breath * 0.2} />
+              <path d="M15 15 C15 22 25 27 25 15 C25 3 15 8 15 15 Z" stroke="#F4C76B" strokeWidth="1" fill="none" opacity={0.5 + breath * 0.2} transform="translate(20, 0)" />
+              <path d="M15 15 Q20 5 45 15 Q20 25 15 15" stroke="#F4C76B" strokeWidth="0.8" fill="none" opacity={0.35 + breath * 0.15} />
+            </svg>
+          </div>
+        )}
 
         {/* ═══════════════════════════════════════
              LAYER 3: 4 CINEMA SCREENS
@@ -573,6 +618,7 @@ export default function Theatre() {
         @keyframes causticSlide{0%{transform:translateX(-30%);opacity:0.3}50%{transform:translateX(30%);opacity:0.8}100%{transform:translateX(-30%);opacity:0.3}}
         @keyframes sparkleFloat{0%{transform:translateY(0)}100%{transform:translateY(30px)}}
         @keyframes particleOrbit{0%{transform:rotate(0deg) translateX(8px) rotate(0deg)}100%{transform:rotate(360deg) translateX(8px) rotate(-360deg)}}
+        @keyframes emailPulse{0%,100%{opacity:0.75;transform:scale(1);text-shadow:0 0 10px rgba(244,199,107,0.08)}50%{opacity:1;transform:scale(1.02);text-shadow:0 0 25px rgba(244,199,107,0.2)}}
         ::-webkit-scrollbar{display:none}
         html{scrollbar-width:none}
         ::selection{background:#F4C76B;color:#050505}
