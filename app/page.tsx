@@ -30,6 +30,7 @@ export default function Theatre() {
   const [breath, setBreath] = useState(0)
   const [mouse, setMouse] = useState({ x: 0.5, y: 0.5 })
   const videoRefs = useRef<Record<string, HTMLVideoElement>>({})
+  const cinematicRef = useRef<HTMLVideoElement>(null)
 
   // Scroll
   useEffect(() => {
@@ -57,10 +58,12 @@ export default function Theatre() {
     return () => window.removeEventListener('mousemove', fn)
   }, [])
 
-  // Start videos
+  // Start cinema videos
   useEffect(() => {
-    if (p > 0.55) Object.values(videoRefs.current).forEach(v => { if (v.paused) v.play().catch(() => {}) })
+    if (p > 0.6) Object.values(videoRefs.current).forEach(v => { if (v.paused) v.play().catch(() => {}) })
   }, [p])
+
+  // Scroll-driven video scrub (moved after phase calculations)
 
   // Audio
   const toggleAudio = useCallback((id: string, e: React.MouseEvent) => {
@@ -85,35 +88,45 @@ export default function Theatre() {
   }, [p])
 
   // ── PHASE CALCULATIONS ──
-  // Phase 1: Curtain (0–0.40)
-  const curtainProgress = Math.min(1, Math.max(0, p / 0.40))
-  const curtainEased = curtainProgress * curtainProgress * (3 - 2 * curtainProgress) // smoothstep
-  const spotIntensity = Math.min(1, p / 0.08)
+  // Phase 1: Curtain (0–0.25)
+  const curtainProgress = Math.min(1, Math.max(0, p / 0.25))
+  const curtainEased = curtainProgress * curtainProgress * (3 - 2 * curtainProgress)
+  const spotIntensity = Math.min(1, p / 0.06)
 
-  // Phase 2: Logo reveal — cinematic, slow, inevitable
-  // Light leak starts before curtain fully opens
-  const lightLeak = Math.min(1, Math.max(0, (p - 0.20) / 0.15))
-  // Logo glow appears early, behind curtain gap
-  const logoGlow = Math.min(1, Math.max(0, (p - 0.28) / 0.12))
-  // Logo itself fades in slowly
-  const logoReveal = Math.min(1, Math.max(0, (p - 0.35) / 0.18))
-  // Logo scale: 0.85 → 1.0 (slow, cinematic)
+  // Phase 2: Logo reveal (0.20–0.40)
+  const lightLeak = Math.min(1, Math.max(0, (p - 0.15) / 0.10))
+  const logoGlow = Math.min(1, Math.max(0, (p - 0.18) / 0.08))
+  const logoReveal = Math.min(1, Math.max(0, (p - 0.22) / 0.12))
   const logoScale = 0.85 + logoReveal * 0.15
-  // Logo fades when cinema appears
-  const logoFade = p > 0.62 ? Math.max(0, 1 - (p - 0.62) / 0.10) : 1
-  // Very slow imperceptible rotation
-  const logoRotation = p * 8 // degrees, very slow
+  const logoFade = p > 0.38 ? Math.max(0, 1 - (p - 0.38) / 0.07) : 1
+  const logoRotation = p * 8
 
-  // Phase 3: Cinema (0.60–1.00)
-  const cinemaReveal = Math.min(1, Math.max(0, (p - 0.60) / 0.15))
+  // Phase 3: Scroll-driven video (0.35–0.65)
+  const videoReveal = Math.min(1, Math.max(0, (p - 0.35) / 0.05))
+  const videoProgress = Math.min(1, Math.max(0, (p - 0.35) / 0.30)) // 0→1 maps to video timeline
+  const videoFade = p > 0.62 ? Math.max(0, 1 - (p - 0.62) / 0.06) : 1
+
+  // Phase 4: Cinema (0.65–1.00)
+  const cinemaReveal = Math.min(1, Math.max(0, (p - 0.65) / 0.12))
   const cinemaReady = p > 0.75
 
   const scrollHint = Math.max(0, 1 - p * 6)
   const isFS = fullscreen !== null
 
+  // Scroll-driven video scrub
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    const vid = cinematicRef.current
+    if (!vid || !vid.duration || vid.duration === Infinity) return
+    const target = videoProgress * vid.duration
+    if (Math.abs(vid.currentTime - target) > 0.03) {
+      vid.currentTime = target
+    }
+  }, [videoProgress])
+
   return (
     <div style={{ background: '#020101' }}>
-      <div style={{ height: '800vh' }} />
+      <div style={{ height: '1200vh' }} />
 
       <div style={{
         position: 'fixed', inset: 0, overflow: 'hidden',
@@ -356,6 +369,43 @@ export default function Theatre() {
 
           <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.3)' }}>
             FOR COLLABORATIONS
+          </div>
+        </div>
+
+        {/* ═══ SCROLL-DRIVEN VIDEO — Phase 3 ═══ */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 9,
+          opacity: videoReveal * videoFade,
+          pointerEvents: 'none',
+        }}>
+          <video
+            ref={cinematicRef}
+            muted
+            playsInline
+            preload="auto"
+            style={{
+              width: '100%', height: '100%', objectFit: 'cover',
+              filter: `brightness(${0.8 + videoProgress * 0.2}) contrast(1.05)`,
+            }}
+          >
+            <source src="/videos/cinematic.mp4" type="video/mp4" />
+          </video>
+
+          {/* Cinematic letterbox */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '8%', background: 'linear-gradient(to bottom, rgba(5,5,5,0.7), transparent)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '8%', background: 'linear-gradient(to top, rgba(5,5,5,0.7), transparent)', pointerEvents: 'none' }} />
+
+          {/* Progress indicator — thin gold line at bottom */}
+          <div style={{
+            position: 'absolute', bottom: '4%', left: '20%', width: '60%', height: '1px',
+            background: 'rgba(244,199,107,0.1)',
+          }}>
+            <div style={{
+              width: `${videoProgress * 100}%`, height: '100%',
+              background: `rgba(244,199,107,${0.4 + breath * 0.15})`,
+              boxShadow: `0 0 8px rgba(244,199,107,${0.15 + breath * 0.08})`,
+              transition: 'width 0.1s linear',
+            }} />
           </div>
         </div>
 
