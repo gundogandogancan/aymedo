@@ -88,28 +88,31 @@ export default function Theatre() {
   }, [p])
 
   // ── PHASE CALCULATIONS ──
-  // Phase 1: Curtain (0–0.15) — fast
-  const curtainProgress = Math.min(1, Math.max(0, p / 0.15))
+  // Phase 1: Curtain (0–0.12)
+  const curtainProgress = Math.min(1, Math.max(0, p / 0.12))
   const curtainEased = curtainProgress * curtainProgress * (3 - 2 * curtainProgress)
-  const spotIntensity = Math.min(1, p / 0.04)
+  const spotIntensity = Math.min(1, p / 0.03)
 
-  // Phase 2: Logo reveal (0.10–0.22) — quick, don't linger
-  const lightLeak = Math.min(1, Math.max(0, (p - 0.08) / 0.06))
-  const logoGlow = Math.min(1, Math.max(0, (p - 0.10) / 0.05))
-  const logoReveal = Math.min(1, Math.max(0, (p - 0.12) / 0.06))
-  const logoScale = 0.85 + logoReveal * 0.15
-  const logoFade = p > 0.20 ? Math.max(0, 1 - (p - 0.20) / 0.05) : 1
-  const logoRotation = p * 8
+  // Phase 2: Logo — appears, zooms in close, then dissolves into black
+  const lightLeak = Math.min(1, Math.max(0, (p - 0.06) / 0.05))
+  const logoGlow = Math.min(1, Math.max(0, (p - 0.08) / 0.04))
+  const logoReveal = Math.min(1, Math.max(0, (p - 0.10) / 0.05))
+  // Logo zooms from 0.85 → 3.5 (rushes toward viewer)
+  const logoZoomProgress = Math.min(1, Math.max(0, (p - 0.10) / 0.12))
+  const logoZoomEased = logoZoomProgress * logoZoomProgress // accelerating
+  const logoScale = 0.85 + logoZoomEased * 2.65
+  // Logo fades as it gets very close
+  const logoFade = logoZoomProgress > 0.6 ? Math.max(0, 1 - (logoZoomProgress - 0.6) / 0.4) : 1
+  const logoRotation = p * 12
 
-  // Phase 3: Scroll-driven video (0.22–0.70) — the journey
-  // Black screen slowly fades into video, like entering a dream
-  const videoFadeIn = Math.min(1, Math.max(0, (p - 0.22) / 0.08)) // black → video
-  const videoProgress = Math.min(1, Math.max(0, (p - 0.25) / 0.45)) // scroll → video timeline
-  const videoFade = p > 0.68 ? Math.max(0, 1 - (p - 0.68) / 0.05) : 1
+  // Phase 3: Scroll-driven video (0.22–0.72) — the journey
+  const videoFadeIn = Math.min(1, Math.max(0, (p - 0.22) / 0.06))
+  const videoProgress = Math.min(1, Math.max(0, (p - 0.23) / 0.49))
+  const videoFade = p > 0.70 ? Math.max(0, 1 - (p - 0.70) / 0.04) : 1
 
-  // Phase 4: Cinema (0.70–1.00)
-  const cinemaReveal = Math.min(1, Math.max(0, (p - 0.70) / 0.10))
-  const cinemaReady = p > 0.78
+  // Phase 4: Cinema (0.72–1.00)
+  const cinemaReveal = Math.min(1, Math.max(0, (p - 0.72) / 0.10))
+  const cinemaReady = p > 0.80
 
   const scrollHint = Math.max(0, 1 - p * 6)
   const isFS = fullscreen !== null
@@ -380,16 +383,18 @@ export default function Theatre() {
           opacity: videoFade,
           pointerEvents: 'none',
         }}>
-          {/* Video — full screen, no zoom, native quality */}
+          {/* Video — original aspect ratio, no crop, no zoom */}
           <video
             ref={cinematicRef}
             muted
             playsInline
             preload="auto"
             style={{
-              position: 'absolute', inset: 0,
-              width: '100vw', height: '100vh',
-              objectFit: 'cover',
+              position: 'absolute',
+              top: '50%', left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '100%', height: '100%',
+              objectFit: 'contain',
               opacity: videoFadeIn,
               filter: 'none',
             }}
