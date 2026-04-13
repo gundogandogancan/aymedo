@@ -17,10 +17,10 @@ import { useRouter } from 'next/navigation'
 // ═══════════════════════════════════════════
 
 const SCREENS = [
-  { id: 'matrix',       src: '/videos/matrix.mp4',       label: 'THE MATRIX',      sub: 'Sci-Fi · 1999' },
-  { id: 'prison-break', src: '/videos/prison-break.mp4', label: 'PRISON BREAK',    sub: 'Thriller · 2005' },
-  { id: 'fareler',      src: '/videos/fareler.mp4',      label: 'STUART LITTLE',   sub: 'Comedy · 1999' },
-  { id: 'escobar',      src: '/videos/escobar.mp4',      label: 'PABLO ESCOBAR',   sub: 'Drama · 2012' },
+  { id: 'matrix',       src: '/videos/matrix.mp4',       word: 'GLAD' },
+  { id: 'prison-break', src: '/videos/prison-break.mp4', word: 'YOU' },
+  { id: 'fareler',      src: '/videos/fareler.mp4',      word: 'MADE IT' },
+  { id: 'escobar',      src: '/videos/escobar.mp4',      word: 'THIS FAR' },
 ]
 
 export default function Theatre() {
@@ -197,17 +197,7 @@ export default function Theatre() {
           )
         })}
 
-        {/* Curtain top valance — stays fixed, doesn't move with curtains */}
-        <div style={{
-          position: 'absolute', top: 0, left: 0, right: 0, height: '100px', zIndex: 21,
-          backgroundImage: 'url(/images/curtain-open.jpg)',
-          backgroundSize: '100% auto',
-          backgroundPosition: 'top center',
-          opacity: Math.min(1, curtainEased * 2),
-          maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)',
-          pointerEvents: 'none',
-        }} />
+        {/* Valance removed */}
 
         {/* Light leak through curtain gap */}
         <div style={{
@@ -357,50 +347,24 @@ export default function Theatre() {
             }}>AYMEDO</div>
           </div>
 
-          {/* Golden liquid glass triangle — mail inside */}
+          {/* Contact — simple, prominent */}
           <div style={{
             opacity: Math.min(1, Math.max(0, (logoReveal - 0.5) / 0.4)),
-            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.5) / 0.4))) * 20}px)`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '30px',
+            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.5) / 0.4))) * 15}px)`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '28px',
             pointerEvents: logoReveal > 0.6 && logoFade > 0.5 ? 'auto' : 'none',
           }}>
-            <div style={{ position: 'relative', width: '240px', height: '210px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              {/* Triangle — animated liquid glass */}
-              <svg width="240" height="210" viewBox="0 0 240 210" style={{ position: 'absolute', inset: 0, filter: `drop-shadow(0 0 25px rgba(244,199,107,${0.1 + breath * 0.06})) drop-shadow(0 0 60px rgba(244,199,107,${0.03 + breath * 0.02}))` }}>
-                <defs>
-                  <linearGradient id="tg" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor={`rgba(244,199,107,${0.15 + Math.sin(breath * Math.PI * 2) * 0.05})`} />
-                    <stop offset="50%" stopColor={`rgba(255,220,150,${0.08 + Math.cos(breath * Math.PI) * 0.03})`} />
-                    <stop offset="100%" stopColor={`rgba(244,199,107,${0.12 + Math.sin(breath * Math.PI * 2 + 1) * 0.04})`} />
-                  </linearGradient>
-                </defs>
-                <polygon points="120,10 230,195 10,195" fill="none" stroke={`rgba(244,199,107,${0.3 + breath * 0.12})`} strokeWidth="1.5" />
-                <polygon points="120,18 225,190 15,190" fill="url(#tg)" opacity={0.35 + breath * 0.1} />
-                <line x1={80 + Math.sin(breath * Math.PI * 2) * 15} y1={100} x2={160 - Math.cos(breath * Math.PI) * 12} y2={98} stroke={`rgba(255,240,200,${0.04 + breath * 0.02})`} strokeWidth="0.5" />
-                <line x1={60 + Math.cos(breath * Math.PI * 2) * 10} y1={145} x2={180 - Math.sin(breath * Math.PI) * 15} y2={148} stroke={`rgba(244,199,107,${0.03 + breath * 0.015})`} strokeWidth="0.5" />
-              </svg>
-
-              {/* Content inside triangle */}
-              <div style={{ position: 'relative', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '15px' }}>
-                {/* Mail icon */}
-                <svg width="20" height="16" viewBox="0 0 24 18" fill="none" style={{ marginBottom: '8px', opacity: 0.5 + breath * 0.2 }}>
-                  <rect x="1" y="1" width="22" height="16" rx="2" stroke="#F4C76B" strokeWidth="1" fill="none" opacity="0.4" />
-                  <path d="M1 1 L12 10 L23 1" stroke="#F4C76B" strokeWidth="1" fill="none" opacity="0.5" />
-                </svg>
-                <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.45)', textAlign: 'center', lineHeight: '1.7', marginBottom: '6px' }}>
-                  FOR COLLABORATIONS
-                </div>
-                <a href="mailto:ola@aymedo.io" style={{
-                  fontSize: '15px', fontWeight: 300, letterSpacing: '0.3em',
-                  color: `rgba(244,199,107,${0.75 + breath * 0.15})`,
-                  textDecoration: 'none',
-                  textShadow: `0 0 18px rgba(244,199,107,${0.12 + breath * 0.08})`,
-                  animation: 'emailPulse 3s ease-in-out infinite',
-                }}>
-                  ola@aymedo.io
-                </a>
-              </div>
+            <div style={{ width: '40px', height: '1px', background: `rgba(244,199,107,${0.2 + breath * 0.1})`, marginBottom: '14px' }} />
+            <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(247,241,232,0.4)', marginBottom: '8px' }}>
+              FOR COLLABORATIONS
             </div>
+            <a href="mailto:ola@aymedo.io" style={{
+              fontSize: '15px', fontWeight: 300, letterSpacing: '0.3em',
+              color: `rgba(244,199,107,${0.7 + breath * 0.15})`,
+              textDecoration: 'none',
+              textShadow: `0 0 18px rgba(244,199,107,${0.1 + breath * 0.06})`,
+              animation: 'emailPulse 3s ease-in-out infinite',
+            }}>ola@aymedo.io</a>
           </div>
         </div>
 
@@ -524,20 +488,22 @@ export default function Theatre() {
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '6%', background: 'linear-gradient(to top, rgba(2,1,1,0.6), transparent)', pointerEvents: 'none', zIndex: 3 }} />
                 </>}
 
-                {/* Film title */}
+                {/* Word — centered on screen */}
                 <div style={{
-                  position: 'absolute', bottom: 0, left: 0, right: 0,
-                  padding: isThisFS ? '16px 24px' : '8px 12px',
-                  background: `linear-gradient(to top, rgba(0,0,0,0.65), rgba(0,0,0,0.2), transparent)`,
-                  borderRadius: isThisFS ? 0 : '0 0 10px 10px',
-                  zIndex: 4, backdropFilter: isThisFS ? 'none' : 'blur(3px)',
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 4, pointerEvents: 'none',
                 }}>
-                  <div style={{ fontSize: isThisFS ? '14px' : '10px', fontWeight: 300, letterSpacing: '0.25em', color: `rgba(247,241,232,${isHov || isThisFS ? 0.9 : 0.6})`, transition: 'color 0.4s ease' }}>
-                    {screen.label}
-                  </div>
-                  <div style={{ fontSize: isThisFS ? '9px' : '7px', fontWeight: 300, letterSpacing: '0.15em', color: 'rgba(247,241,232,0.3)', marginTop: '2px' }}>
-                    {screen.sub}
-                  </div>
+                  <span style={{
+                    fontSize: isThisFS ? '32px' : '20px',
+                    fontWeight: 200,
+                    letterSpacing: '0.5em',
+                    color: `rgba(247,241,232,${isHov || isThisFS ? 0.65 : 0.25})`,
+                    textShadow: '0 2px 20px rgba(0,0,0,0.8)',
+                    transition: 'all 0.6s ease',
+                  }}>
+                    {screen.word}
+                  </span>
                 </div>
 
                 {/* Audio button */}
