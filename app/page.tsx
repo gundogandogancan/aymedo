@@ -315,56 +315,54 @@ export default function Theatre() {
             pointerEvents: 'none',
           }} />
 
-          {/* Logo — transparent, circular, imperceptible rotation */}
+          {/* Logo — fully transparent PNG, no circle clip needed */}
           <div style={{
-            width: '180px', height: '180px', borderRadius: '50%', overflow: 'hidden',
+            width: '200px', height: '200px',
             transform: `rotate(${logoRotation}deg)`,
-            boxShadow: `
-              0 0 40px rgba(244,199,107,${0.12 + breath * 0.08}),
-              0 0 80px rgba(244,199,107,${0.05 + breath * 0.03}),
-              0 0 120px rgba(244,199,107,${0.02 + breath * 0.01})
-            `,
+            filter: `drop-shadow(0 0 30px rgba(244,199,107,${0.15 + breath * 0.1})) drop-shadow(0 0 60px rgba(244,199,107,${0.05 + breath * 0.03}))`,
           }}>
             <img src="/logo.png" alt="AYMEDO" style={{
-              width: '115%', height: '115%', objectFit: 'cover',
-              marginLeft: '-7.5%', marginTop: '-7.5%',
+              width: '100%', height: '100%', objectFit: 'contain',
               opacity: 0.95,
-              filter: `drop-shadow(0 0 20px rgba(244,199,107,${0.2 + breath * 0.1}))`,
             }} />
           </div>
 
-          {/* AYMEDO text — appears slightly after logo */}
-          <div style={{
-            marginTop: '30px',
-            opacity: Math.min(1, Math.max(0, (logoReveal - 0.3) / 0.5)),
-            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.3) / 0.5))) * 15}px)`,
-          }}>
-            <div style={{
-              fontSize: '26px', fontWeight: 200, letterSpacing: '1.2em',
-              color: '#F4C76B',
-              textShadow: `0 0 25px rgba(244,199,107,${0.15 + breath * 0.1}), 0 0 50px rgba(244,199,107,${0.05 + breath * 0.03})`,
-              animation: 'textGlow 4s ease-in-out infinite',
-            }}>AYMEDO</div>
-          </div>
+        </div>
 
-          {/* Contact — simple, prominent */}
+        {/* ═══ AYMEDO TEXT + CONTACT — bottom left ═══ */}
+        <div style={{
+          position: 'absolute', bottom: '28px', left: '28px', zIndex: 10,
+          opacity: logoReveal * logoFade,
+          transform: `translateY(${(1 - logoReveal) * 20}px)`,
+          pointerEvents: logoReveal > 0.5 && logoFade > 0.5 ? 'auto' : 'none',
+          display: 'flex', flexDirection: 'column', gap: '10px',
+        }}>
           <div style={{
-            opacity: Math.min(1, Math.max(0, (logoReveal - 0.5) / 0.4)),
-            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.5) / 0.4))) * 15}px)`,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '28px',
-            pointerEvents: logoReveal > 0.6 && logoFade > 0.5 ? 'auto' : 'none',
-          }}>
-            <div style={{ width: '40px', height: '1px', background: `rgba(244,199,107,${0.2 + breath * 0.1})`, marginBottom: '14px' }} />
-            <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.4em', color: 'rgba(247,241,232,0.4)', marginBottom: '8px' }}>
-              FOR COLLABORATIONS
-            </div>
+            fontSize: '22px', fontWeight: 200, letterSpacing: '0.8em',
+            color: '#F4C76B',
+            textShadow: `0 0 20px rgba(244,199,107,${0.12 + breath * 0.08})`,
+            animation: 'textGlow 4s ease-in-out infinite',
+          }}>AYMEDO</div>
+
+          <div style={{ width: '35px', height: '1px', background: `rgba(244,199,107,${0.18 + breath * 0.08})` }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* Mail icon */}
+            <svg width="14" height="11" viewBox="0 0 24 18" fill="none" style={{ opacity: 0.5 + breath * 0.15, flexShrink: 0 }}>
+              <rect x="1" y="1" width="22" height="16" rx="2" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
+              <path d="M1 1 L12 10 L23 1" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
+            </svg>
             <a href="mailto:ola@aymedo.io" style={{
-              fontSize: '15px', fontWeight: 300, letterSpacing: '0.3em',
-              color: `rgba(244,199,107,${0.7 + breath * 0.15})`,
+              fontSize: '11px', fontWeight: 300, letterSpacing: '0.2em',
+              color: `rgba(244,199,107,${0.65 + breath * 0.15})`,
               textDecoration: 'none',
-              textShadow: `0 0 18px rgba(244,199,107,${0.1 + breath * 0.06})`,
+              textShadow: `0 0 12px rgba(244,199,107,${0.08 + breath * 0.05})`,
               animation: 'emailPulse 3s ease-in-out infinite',
             }}>ola@aymedo.io</a>
+          </div>
+
+          <div style={{ fontSize: '7px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.3)' }}>
+            FOR COLLABORATIONS
           </div>
         </div>
 
@@ -538,11 +536,10 @@ export default function Theatre() {
             zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
             opacity: cinemaReveal,
           }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', overflow: 'hidden',
-              boxShadow: `0 0 15px rgba(244,199,107,${0.1 + breath * 0.06})`,
-            }}>
-              <img src="/logo.png" alt="" style={{ width: '115%', height: '115%', objectFit: 'cover', marginLeft: '-7.5%', marginTop: '-7.5%', opacity: 0.9 }} />
-            </div>
+            <img src="/logo.png" alt="" style={{
+              width: '36px', height: '36px', objectFit: 'contain', opacity: 0.85,
+              filter: `drop-shadow(0 0 10px rgba(244,199,107,${0.1 + breath * 0.06}))`,
+            }} />
             <span style={{ fontSize: '10px', fontWeight: 200, letterSpacing: '0.7em', color: '#F4C76B', opacity: 0.6 + breath * 0.15, animation: 'textGlow 4s ease-in-out infinite' }}>AYMEDO</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '12px', height: '1px', background: `rgba(244,199,107,${0.1 + breath * 0.06})` }} />
