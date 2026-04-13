@@ -88,27 +88,28 @@ export default function Theatre() {
   }, [p])
 
   // ── PHASE CALCULATIONS ──
-  // Phase 1: Curtain (0–0.25)
-  const curtainProgress = Math.min(1, Math.max(0, p / 0.25))
+  // Phase 1: Curtain (0–0.15) — fast
+  const curtainProgress = Math.min(1, Math.max(0, p / 0.15))
   const curtainEased = curtainProgress * curtainProgress * (3 - 2 * curtainProgress)
-  const spotIntensity = Math.min(1, p / 0.06)
+  const spotIntensity = Math.min(1, p / 0.04)
 
-  // Phase 2: Logo reveal (0.20–0.40)
-  const lightLeak = Math.min(1, Math.max(0, (p - 0.15) / 0.10))
-  const logoGlow = Math.min(1, Math.max(0, (p - 0.18) / 0.08))
-  const logoReveal = Math.min(1, Math.max(0, (p - 0.22) / 0.12))
+  // Phase 2: Logo reveal (0.10–0.22) — quick, don't linger
+  const lightLeak = Math.min(1, Math.max(0, (p - 0.08) / 0.06))
+  const logoGlow = Math.min(1, Math.max(0, (p - 0.10) / 0.05))
+  const logoReveal = Math.min(1, Math.max(0, (p - 0.12) / 0.06))
   const logoScale = 0.85 + logoReveal * 0.15
-  const logoFade = p > 0.38 ? Math.max(0, 1 - (p - 0.38) / 0.07) : 1
+  const logoFade = p > 0.20 ? Math.max(0, 1 - (p - 0.20) / 0.05) : 1
   const logoRotation = p * 8
 
-  // Phase 3: Scroll-driven video (0.35–0.65)
-  const videoReveal = Math.min(1, Math.max(0, (p - 0.35) / 0.05))
-  const videoProgress = Math.min(1, Math.max(0, (p - 0.35) / 0.30)) // 0→1 maps to video timeline
-  const videoFade = p > 0.62 ? Math.max(0, 1 - (p - 0.62) / 0.06) : 1
+  // Phase 3: Scroll-driven video (0.22–0.70) — the journey
+  // Black screen slowly fades into video, like entering a dream
+  const videoFadeIn = Math.min(1, Math.max(0, (p - 0.22) / 0.08)) // black → video
+  const videoProgress = Math.min(1, Math.max(0, (p - 0.25) / 0.45)) // scroll → video timeline
+  const videoFade = p > 0.68 ? Math.max(0, 1 - (p - 0.68) / 0.05) : 1
 
-  // Phase 4: Cinema (0.65–1.00)
-  const cinemaReveal = Math.min(1, Math.max(0, (p - 0.65) / 0.12))
-  const cinemaReady = p > 0.75
+  // Phase 4: Cinema (0.70–1.00)
+  const cinemaReveal = Math.min(1, Math.max(0, (p - 0.70) / 0.10))
+  const cinemaReady = p > 0.78
 
   const scrollHint = Math.max(0, 1 - p * 6)
   const isFS = fullscreen !== null
@@ -372,39 +373,44 @@ export default function Theatre() {
           </div>
         </div>
 
-        {/* ═══ SCROLL-DRIVEN VIDEO — Phase 3 ═══ */}
+        {/* ═══ SCROLL-DRIVEN VIDEO — The Journey ═══ */}
+        {/* Black screen slowly reveals video — like entering a dream */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 9,
-          opacity: videoReveal * videoFade,
+          opacity: videoFade,
           pointerEvents: 'none',
         }}>
+          {/* Video — full screen, no zoom, native quality */}
           <video
             ref={cinematicRef}
             muted
             playsInline
             preload="auto"
             style={{
-              width: '100%', height: '100%', objectFit: 'cover',
-              filter: `brightness(${0.8 + videoProgress * 0.2}) contrast(1.05)`,
+              position: 'absolute', inset: 0,
+              width: '100vw', height: '100vh',
+              objectFit: 'cover',
+              opacity: videoFadeIn,
+              filter: 'none',
             }}
           >
             <source src="/videos/cinematic.mp4" type="video/mp4" />
           </video>
 
-          {/* Cinematic letterbox */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '8%', background: 'linear-gradient(to bottom, rgba(5,5,5,0.7), transparent)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '8%', background: 'linear-gradient(to top, rgba(5,5,5,0.7), transparent)', pointerEvents: 'none' }} />
+          {/* Subtle cinematic letterbox — very thin */}
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '5%', background: 'linear-gradient(to bottom, rgba(0,0,0,0.4), transparent)', pointerEvents: 'none', zIndex: 1 }} />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '5%', background: 'linear-gradient(to top, rgba(0,0,0,0.4), transparent)', pointerEvents: 'none', zIndex: 1 }} />
 
-          {/* Progress indicator — thin gold line at bottom */}
+          {/* Minimal progress line — barely visible, just a hint */}
           <div style={{
-            position: 'absolute', bottom: '4%', left: '20%', width: '60%', height: '1px',
-            background: 'rgba(244,199,107,0.1)',
+            position: 'absolute', bottom: '3%', left: '25%', width: '50%', height: '1px',
+            background: 'rgba(255,255,255,0.06)', zIndex: 2,
+            opacity: videoFadeIn,
           }}>
             <div style={{
               width: `${videoProgress * 100}%`, height: '100%',
-              background: `rgba(244,199,107,${0.4 + breath * 0.15})`,
-              boxShadow: `0 0 8px rgba(244,199,107,${0.15 + breath * 0.08})`,
-              transition: 'width 0.1s linear',
+              background: `rgba(244,199,107,${0.3 + breath * 0.1})`,
+              boxShadow: `0 0 6px rgba(244,199,107,${0.1 + breath * 0.05})`,
             }} />
           </div>
         </div>
