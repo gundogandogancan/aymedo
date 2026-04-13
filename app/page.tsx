@@ -90,10 +90,25 @@ export default function Theatre() {
     return () => window.removeEventListener('mousemove', fn)
   }, [])
 
-  // Start cinema videos
+  // Start cinema videos — aggressive retry for stubborn videos
   useEffect(() => {
-    if (p > 0.6) Object.values(videoRefs.current).forEach(v => { if (v.paused) v.play().catch(() => {}) })
-  }, [p])
+    if (p > 0.55) {
+      const tryPlay = () => {
+        Object.values(videoRefs.current).forEach(v => {
+          if (v && v.paused) {
+            v.load()
+            v.play().catch(() => {})
+          }
+        })
+      }
+      tryPlay()
+      // Retry multiple times for slow-loading videos
+      const t1 = setTimeout(tryPlay, 500)
+      const t2 = setTimeout(tryPlay, 1500)
+      const t3 = setTimeout(tryPlay, 3000)
+      return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3) }
+    }
+  }, [p > 0.55])
 
   // Scroll-driven video scrub (moved after phase calculations)
 
@@ -694,7 +709,7 @@ export default function Theatre() {
 
                 {/* Video */}
                 <video ref={el => { if (el) videoRefs.current[screen.id] = el }}
-                  muted loop playsInline preload="auto"
+                  muted loop playsInline preload="auto" autoPlay
                   style={{
                     position: 'absolute', inset: 0,
                     width: '100%', height: '100%', objectFit: 'cover',
