@@ -419,100 +419,94 @@ export default function Theatre() {
             }} />
           </div>
 
-          {/* ═══ HYPNOTIC SIDE PANELS — color slide like hypnosis spiral ═══ */}
+          {/* ═══ SCROLL-DRIVEN B&W STRIPES — opposite sides, scroll-linked ═══ */}
+          {(() => {
+            // Scroll position drives the stripe offset — each scroll step flips bands
+            const stripeOffset = videoProgress * 2000 // pixels of movement
+            const bandSize = 120 // px per band
 
-          {/* Left panel — flowing color bands */}
-          <div style={{
-            position: 'absolute', top: 0, left: 0, bottom: 0,
-            width: 'calc((100vw - 56.25vh) / 2)',
-            overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
-            opacity: videoFadeIn,
-          }}>
-            {/* Sliding color gradient — moves downward continuously */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: `repeating-linear-gradient(
-                180deg,
-                rgba(90,30,70,0.15) 0px,
-                rgba(60,20,80,0.12) 40px,
-                rgba(30,15,60,0.08) 80px,
-                rgba(244,199,107,0.06) 120px,
-                rgba(140,80,30,0.08) 160px,
-                rgba(80,40,90,0.12) 200px,
-                rgba(50,20,70,0.1) 240px,
-                rgba(244,199,107,0.04) 280px,
-                rgba(90,30,70,0.15) 320px
-              )`,
-              backgroundSize: '100% 320px',
-              animation: 'hypnoSlide 6s linear infinite',
-            }} />
-            {/* Inner glow toward video */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(to right, rgba(5,3,2,0.6), transparent)',
-            }} />
-            {/* Text */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: '16px', opacity: 0.35 + breath * 0.15,
-            }}>
-              <div style={{ writingMode: 'vertical-rl', fontSize: '10px', fontWeight: 200, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.5)', animation: 'textGlow 4s ease-in-out infinite' }}>
-                YOU ARE ALMOST THERE
+            return <>
+              {/* Left panel */}
+              <div style={{
+                position: 'absolute', top: 0, left: 0, bottom: 0,
+                width: 'calc((100vw - 56.25vh) / 2)',
+                minWidth: '40px',
+                overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
+                opacity: videoFadeIn,
+              }}>
+                {/* Scroll-driven black/white bands — moves DOWN with scroll */}
+                <div style={{
+                  position: 'absolute', left: 0, right: 0,
+                  top: `-${bandSize}px`,
+                  height: `calc(100% + ${bandSize * 4}px)`,
+                  background: `repeating-linear-gradient(180deg,
+                    rgba(240,235,225,0.08) 0px,
+                    rgba(240,235,225,0.08) ${bandSize}px,
+                    rgba(5,5,5,0.95) ${bandSize}px,
+                    rgba(5,5,5,0.95) ${bandSize * 2}px
+                  )`,
+                  transform: `translateY(${stripeOffset % (bandSize * 2)}px)`,
+                }} />
+                {/* Soft edge toward video */}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, rgba(5,3,2,0.95))' }} />
+                {/* Text overlay */}
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '14px', opacity: 0.4 + breath * 0.15,
+                }}>
+                  <div style={{ writingMode: 'vertical-rl', fontSize: '9px', fontWeight: 200, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.5)', animation: 'textGlow 4s ease-in-out infinite' }}>
+                    YOU ARE ALMOST THERE
+                  </div>
+                  <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite' }}>
+                    <svg width="12" height="18" viewBox="0 0 16 24" fill="none">
+                      <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" />
+                      <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite' }}>
-                <svg width="12" height="20" viewBox="0 0 16 24" fill="none">
-                  <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" />
-                  <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-          </div>
 
-          {/* Right panel — flowing color bands (offset timing) */}
-          <div style={{
-            position: 'absolute', top: 0, right: 0, bottom: 0,
-            width: 'calc((100vw - 56.25vh) / 2)',
-            overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
-            opacity: videoFadeIn,
-          }}>
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: `repeating-linear-gradient(
-                180deg,
-                rgba(244,199,107,0.04) 0px,
-                rgba(80,40,90,0.12) 40px,
-                rgba(140,80,30,0.08) 80px,
-                rgba(50,20,70,0.1) 120px,
-                rgba(244,199,107,0.06) 160px,
-                rgba(30,15,60,0.08) 200px,
-                rgba(60,20,80,0.12) 240px,
-                rgba(90,30,70,0.15) 280px,
-                rgba(244,199,107,0.04) 320px
-              )`,
-              backgroundSize: '100% 320px',
-              animation: 'hypnoSlide 8s linear infinite',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0,
-              background: 'linear-gradient(to left, rgba(5,3,2,0.6), transparent)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              gap: '16px', opacity: 0.35 + breath * 0.15,
-            }}>
-              <div style={{ writingMode: 'vertical-rl', fontSize: '10px', fontWeight: 200, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.5)', transform: 'rotate(180deg)', animation: 'textGlow 4s ease-in-out infinite', animationDelay: '2s' }}>
-                KEEP SCROLLING
+              {/* Right panel — OPPOSITE: moves UP when left moves DOWN */}
+              <div style={{
+                position: 'absolute', top: 0, right: 0, bottom: 0,
+                width: 'calc((100vw - 56.25vh) / 2)',
+                minWidth: '40px',
+                overflow: 'hidden', zIndex: 3, pointerEvents: 'none',
+                opacity: videoFadeIn,
+              }}>
+                {/* Opposite direction bands — moves UP */}
+                <div style={{
+                  position: 'absolute', left: 0, right: 0,
+                  top: `-${bandSize}px`,
+                  height: `calc(100% + ${bandSize * 4}px)`,
+                  background: `repeating-linear-gradient(180deg,
+                    rgba(5,5,5,0.95) 0px,
+                    rgba(5,5,5,0.95) ${bandSize}px,
+                    rgba(240,235,225,0.08) ${bandSize}px,
+                    rgba(240,235,225,0.08) ${bandSize * 2}px
+                  )`,
+                  transform: `translateY(-${stripeOffset % (bandSize * 2)}px)`,
+                }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to left, transparent 60%, rgba(5,3,2,0.95))' }} />
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  gap: '14px', opacity: 0.4 + breath * 0.15,
+                }}>
+                  <div style={{ writingMode: 'vertical-rl', fontSize: '9px', fontWeight: 200, letterSpacing: '0.5em', color: 'rgba(244,199,107,0.5)', transform: 'rotate(180deg)', animation: 'textGlow 4s ease-in-out infinite', animationDelay: '2s' }}>
+                    KEEP SCROLLING
+                  </div>
+                  <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite', animationDelay: '0.5s' }}>
+                    <svg width="12" height="18" viewBox="0 0 16 24" fill="none">
+                      <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" />
+                      <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                </div>
               </div>
-              <div style={{ animation: 'scrollBounce 2.5s ease-in-out infinite', animationDelay: '0.5s' }}>
-                <svg width="12" height="20" viewBox="0 0 16 24" fill="none">
-                  <path d="M8 4 L8 18" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" />
-                  <path d="M4 14 L8 20 L12 14" stroke="rgba(244,199,107,0.4)" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-          </div>
+            </>
+          })()}
 
         </div>
 
