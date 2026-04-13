@@ -480,18 +480,17 @@ export default function Theatre() {
                   <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '6%', background: 'linear-gradient(to top, rgba(2,1,1,0.6), transparent)', pointerEvents: 'none', zIndex: 3 }} />
                 </>}
 
-                {/* Word — centered on screen */}
+                {/* Word — bottom right corner of each screen */}
                 <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  position: 'absolute', bottom: isThisFS ? '16px' : '8px', right: isThisFS ? '60px' : '44px',
                   zIndex: 4, pointerEvents: 'none',
                 }}>
                   <span style={{
-                    fontSize: isThisFS ? '32px' : '20px',
-                    fontWeight: 200,
-                    letterSpacing: '0.5em',
-                    color: `rgba(247,241,232,${isHov || isThisFS ? 0.65 : 0.25})`,
-                    textShadow: '0 2px 20px rgba(0,0,0,0.8)',
+                    fontSize: isThisFS ? '16px' : '10px',
+                    fontWeight: 300,
+                    letterSpacing: '0.35em',
+                    color: `rgba(247,241,232,${isHov || isThisFS ? 0.6 : 0.2})`,
+                    textShadow: '0 1px 12px rgba(0,0,0,0.9)',
                     transition: 'all 0.6s ease',
                   }}>
                     {screen.word}
@@ -523,23 +522,35 @@ export default function Theatre() {
           })}
         </div>
 
-        {/* ═══ BOTTOM: Logo + Enter (cinema phase) ═══ */}
+        {/* ═══ BOTTOM: Logo + Mail (cinema phase) ═══ */}
         {!isFS && cinemaReveal > 0 && (
           <div style={{
-            position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)',
-            zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px',
+            position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+            zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
             opacity: cinemaReveal,
           }}>
             <img src="/logo.png" alt="" style={{
-              width: '36px', height: '36px', objectFit: 'contain', opacity: 0.85,
-              filter: `drop-shadow(0 0 10px rgba(244,199,107,${0.1 + breath * 0.06}))`,
+              width: '34px', height: '34px', objectFit: 'contain', opacity: 0.8,
+              filter: `drop-shadow(0 0 10px rgba(244,199,107,${0.08 + breath * 0.05}))`,
             }} />
-            <span style={{ fontSize: '10px', fontWeight: 200, letterSpacing: '0.7em', color: '#F4C76B', opacity: 0.6 + breath * 0.15, animation: 'textGlow 4s ease-in-out infinite' }}>AYMEDO</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ width: '12px', height: '1px', background: `rgba(244,199,107,${0.1 + breath * 0.06})` }} />
-              <a href="mailto:ola@aymedo.io" style={{ fontSize: '7px', fontWeight: 200, letterSpacing: '0.4em', color: `rgba(247,241,232,${0.3 + breath * 0.1})`, textTransform: 'uppercase', textDecoration: 'none', cursor: 'pointer' }}>Press Enter</a>
-              <div style={{ width: '12px', height: '1px', background: `rgba(244,199,107,${0.1 + breath * 0.06})` }} />
-            </div>
+            <span style={{ fontSize: '9px', fontWeight: 200, letterSpacing: '0.6em', color: '#F4C76B', opacity: 0.5 + breath * 0.15, animation: 'textGlow 4s ease-in-out infinite' }}>AYMEDO</span>
+            {/* Mail — big, prominent, with icon */}
+            <a href="mailto:ola@aymedo.io" style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              textDecoration: 'none', cursor: 'pointer',
+              marginTop: '4px',
+            }}>
+              <svg width="18" height="14" viewBox="0 0 24 18" fill="none" style={{ opacity: 0.6 + breath * 0.2, flexShrink: 0 }}>
+                <rect x="1" y="1" width="22" height="16" rx="2" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
+                <path d="M1 1 L12 10 L23 1" stroke="#F4C76B" strokeWidth="1.2" fill="none" />
+              </svg>
+              <span style={{
+                fontSize: '13px', fontWeight: 300, letterSpacing: '0.25em',
+                color: `rgba(244,199,107,${0.7 + breath * 0.15})`,
+                textShadow: `0 0 15px rgba(244,199,107,${0.1 + breath * 0.06})`,
+                animation: 'emailPulse 3s ease-in-out infinite',
+              }}>ola@aymedo.io</span>
+            </a>
           </div>
         )}
 
