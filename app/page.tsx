@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 
 // ═══════════════════════════════════════════
 // AYMEDO — Cinematic Theatre Experience
@@ -24,12 +23,10 @@ const SCREENS = [
 ]
 
 export default function Theatre() {
-  const router = useRouter()
   const [p, setP] = useState(0)
   const [activeAudio, setActiveAudio] = useState<string | null>(null)
   const [hovered, setHovered] = useState<string | null>(null)
   const [fullscreen, setFullscreen] = useState<string | null>(null)
-  const [exiting, setExiting] = useState(false)
   const [breath, setBreath] = useState(0)
   const [mouse, setMouse] = useState({ x: 0.5, y: 0.5 })
   const videoRefs = useRef<Record<string, HTMLVideoElement>>({})
@@ -79,15 +76,13 @@ export default function Theatre() {
   useEffect(() => {
     const fn = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { setFullscreen(null); return }
-      if (e.key === 'Enter' && !exiting && !fullscreen && p > 0.8) {
-        setExiting(true)
-        Object.values(videoRefs.current).forEach(v => { v.muted = true })
-        setTimeout(() => router.push('/home'), 1400)
+      if (e.key === 'Enter' && p > 0.6) {
+        window.location.href = 'mailto:ola@aymedo.io'
       }
     }
     window.addEventListener('keydown', fn)
     return () => window.removeEventListener('keydown', fn)
-  }, [router, exiting, fullscreen, p])
+  }, [p])
 
   // ── PHASE CALCULATIONS ──
   // Phase 1: Curtain (0–0.40)
@@ -124,8 +119,6 @@ export default function Theatre() {
         position: 'fixed', inset: 0, overflow: 'hidden',
         fontFamily: 'Inter, system-ui, sans-serif',
         background: '#020101',
-        opacity: exiting ? 0 : 1,
-        transition: exiting ? 'opacity 1.2s ease' : 'none',
       }}>
 
         {/* ═══════════════════════════════════════
@@ -469,8 +462,9 @@ export default function Theatre() {
                     position: 'absolute', inset: 0,
                     width: '100%', height: '100%', objectFit: 'cover',
                     borderRadius: isThisFS ? 0 : '10px',
+                    imageRendering: 'auto',
                     transform: `scale(${isHov && !isFS ? 1.04 : 1.0})`,
-                    filter: `brightness(${isThisFS ? 1 : isHov ? 0.9 : isDimmed ? 0.15 : 0.55})`,
+                    filter: `brightness(${isThisFS ? 1.05 : isHov ? 1.0 : isDimmed ? 0.15 : 0.7}) saturate(${isThisFS ? 1.1 : isHov ? 1.15 : 1.0}) contrast(${isHov ? 1.05 : 1.0})`,
                     transition: 'all 0.7s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >
@@ -543,7 +537,7 @@ export default function Theatre() {
             <span style={{ fontSize: '10px', fontWeight: 200, letterSpacing: '0.7em', color: '#F4C76B', opacity: 0.6 + breath * 0.15, animation: 'textGlow 4s ease-in-out infinite' }}>AYMEDO</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <div style={{ width: '12px', height: '1px', background: `rgba(244,199,107,${0.1 + breath * 0.06})` }} />
-              <span style={{ fontSize: '7px', fontWeight: 200, letterSpacing: '0.4em', color: `rgba(247,241,232,${0.3 + breath * 0.1})`, textTransform: 'uppercase' }}>Press Enter</span>
+              <a href="mailto:ola@aymedo.io" style={{ fontSize: '7px', fontWeight: 200, letterSpacing: '0.4em', color: `rgba(247,241,232,${0.3 + breath * 0.1})`, textTransform: 'uppercase', textDecoration: 'none', cursor: 'pointer' }}>Press Enter</a>
               <div style={{ width: '12px', height: '1px', background: `rgba(244,199,107,${0.1 + breath * 0.06})` }} />
             </div>
           </div>
