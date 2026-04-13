@@ -95,9 +95,19 @@ export default function Theatre() {
   const curtainEased = curtainProgress * curtainProgress * (3 - 2 * curtainProgress) // smoothstep
   const spotIntensity = Math.min(1, p / 0.08)
 
-  // Phase 2: Logo reveal (0.35–0.65)
-  const logoReveal = Math.min(1, Math.max(0, (p - 0.35) / 0.15))
-  const logoFade = p > 0.60 ? Math.max(0, 1 - (p - 0.60) / 0.10) : 1
+  // Phase 2: Logo reveal — cinematic, slow, inevitable
+  // Light leak starts before curtain fully opens
+  const lightLeak = Math.min(1, Math.max(0, (p - 0.20) / 0.15))
+  // Logo glow appears early, behind curtain gap
+  const logoGlow = Math.min(1, Math.max(0, (p - 0.28) / 0.12))
+  // Logo itself fades in slowly
+  const logoReveal = Math.min(1, Math.max(0, (p - 0.35) / 0.18))
+  // Logo scale: 0.85 → 1.0 (slow, cinematic)
+  const logoScale = 0.85 + logoReveal * 0.15
+  // Logo fades when cinema appears
+  const logoFade = p > 0.62 ? Math.max(0, 1 - (p - 0.62) / 0.10) : 1
+  // Very slow imperceptible rotation
+  const logoRotation = p * 8 // degrees, very slow
 
   // Phase 3: Cinema (0.60–1.00)
   const cinemaReveal = Math.min(1, Math.max(0, (p - 0.60) / 0.15))
@@ -232,48 +242,138 @@ export default function Theatre() {
         )}
 
         {/* ═══════════════════════════════════════
-             LAYER 2: AYMEDO LOGO REVEAL
+             LAYER 2: CINEMATIC LOGO REVEAL
             ═══════════════════════════════════════ */}
+
+        {/* Pre-reveal: Light bloom behind curtain gap — appears BEFORE logo */}
+        <div style={{
+          position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%, -50%)',
+          width: `${120 + lightLeak * 300}px`, height: `${120 + lightLeak * 300}px`,
+          borderRadius: '50%',
+          background: `radial-gradient(circle,
+            rgba(244,199,107,${0.08 * lightLeak * (0.8 + breath * 0.2)}) 0%,
+            rgba(244,199,107,${0.03 * lightLeak}) 40%,
+            transparent 70%
+          )`,
+          filter: 'blur(40px)',
+          pointerEvents: 'none', zIndex: 8,
+          opacity: logoFade,
+        }} />
+
+        {/* Pre-reveal: Vertical light beam — golden rain from reference */}
+        <div style={{
+          position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)',
+          width: `${4 + logoGlow * 80}px`, height: '60%',
+          background: `linear-gradient(to bottom,
+            rgba(255,230,170,${0.06 * logoGlow * (0.7 + breath * 0.3)}) 0%,
+            rgba(244,199,107,${0.04 * logoGlow}) 40%,
+            rgba(244,199,107,${0.02 * logoGlow}) 70%,
+            transparent 100%
+          )`,
+          filter: 'blur(8px)',
+          pointerEvents: 'none', zIndex: 8,
+          opacity: logoFade,
+        }} />
+
+        {/* Logo container — the reveal */}
         <div style={{
           position: 'absolute', inset: 0, zIndex: 10,
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           opacity: logoReveal * logoFade,
-          transform: `scale(${0.85 + logoReveal * 0.15})`,
+          transform: `scale(${logoScale})`,
           pointerEvents: 'none',
+          transition: 'opacity 0.3s ease',
         }}>
-          {/* Logo — transparent, circular */}
+
+          {/* Reactive particle field — responds to logo presence */}
+          <div style={{
+            position: 'absolute', width: '400px', height: '400px',
+            pointerEvents: 'none',
+            opacity: logoReveal * 0.5 * (0.6 + breath * 0.4),
+          }}>
+            {Array.from({ length: 20 }).map((_, i) => {
+              const angle = (i / 20) * Math.PI * 2
+              const dist = 120 + (i % 3) * 40
+              const size = 1 + (i % 2)
+              return (
+                <div key={i} style={{
+                  position: 'absolute',
+                  left: `${50 + Math.cos(angle) * (dist / 4)}%`,
+                  top: `${50 + Math.sin(angle) * (dist / 4)}%`,
+                  width: `${size}px`, height: `${size}px`,
+                  borderRadius: '50%',
+                  background: `rgba(244,199,107,${0.3 + (i % 3) * 0.2})`,
+                  boxShadow: `0 0 ${size * 3}px rgba(244,199,107,0.15)`,
+                  animation: `particleOrbit ${12 + i * 0.7}s linear infinite`,
+                  animationDelay: `${-i * 0.6}s`,
+                }} />
+              )
+            })}
+          </div>
+
+          {/* Outer glow halo — breathes */}
+          <div style={{
+            position: 'absolute',
+            width: `${220 + breath * 20}px`, height: `${220 + breath * 20}px`,
+            borderRadius: '50%',
+            background: `radial-gradient(circle,
+              rgba(244,199,107,${0.06 + breath * 0.03}) 0%,
+              rgba(244,199,107,${0.02 + breath * 0.01}) 50%,
+              transparent 70%
+            )`,
+            filter: 'blur(20px)',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Logo — transparent, circular, imperceptible rotation */}
           <div style={{
             width: '180px', height: '180px', borderRadius: '50%', overflow: 'hidden',
-            animation: 'logoFloat 6s ease-in-out infinite',
-            boxShadow: `0 0 50px rgba(244,199,107,${0.15 + breath * 0.1}), 0 0 100px rgba(244,199,107,${0.05 + breath * 0.03})`,
+            transform: `rotate(${logoRotation}deg)`,
+            boxShadow: `
+              0 0 40px rgba(244,199,107,${0.12 + breath * 0.08}),
+              0 0 80px rgba(244,199,107,${0.05 + breath * 0.03}),
+              0 0 120px rgba(244,199,107,${0.02 + breath * 0.01})
+            `,
           }}>
             <img src="/logo.png" alt="AYMEDO" style={{
               width: '115%', height: '115%', objectFit: 'cover',
               marginLeft: '-7.5%', marginTop: '-7.5%',
               opacity: 0.95,
-              filter: `drop-shadow(0 0 25px rgba(244,199,107,${0.2 + breath * 0.1}))`,
+              filter: `drop-shadow(0 0 20px rgba(244,199,107,${0.2 + breath * 0.1}))`,
             }} />
           </div>
 
-          {/* AYMEDO text */}
+          {/* AYMEDO text — appears slightly after logo */}
           <div style={{
-            marginTop: '28px', fontSize: '24px', fontWeight: 200, letterSpacing: '1.2em',
-            color: '#F4C76B',
-            textShadow: `0 0 30px rgba(244,199,107,${0.2 + breath * 0.12})`,
-            animation: 'textGlow 4s ease-in-out infinite',
-          }}>AYMEDO</div>
-
-          <div style={{ width: '50px', height: '1px', background: `rgba(244,199,107,${0.25 + breath * 0.1})`, marginTop: '20px' }} />
-
-          <div style={{ marginTop: '16px', fontSize: '9px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.4)', textAlign: 'center', lineHeight: '1.9' }}>
-            To learn more about life<br />and for collaborations
+            marginTop: '30px',
+            opacity: Math.min(1, Math.max(0, (logoReveal - 0.3) / 0.5)),
+            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.3) / 0.5))) * 15}px)`,
+          }}>
+            <div style={{
+              fontSize: '26px', fontWeight: 200, letterSpacing: '1.2em',
+              color: '#F4C76B',
+              textShadow: `0 0 25px rgba(244,199,107,${0.15 + breath * 0.1}), 0 0 50px rgba(244,199,107,${0.05 + breath * 0.03})`,
+              animation: 'textGlow 4s ease-in-out infinite',
+            }}>AYMEDO</div>
           </div>
-          <a href="mailto:ola@aymedo.io" style={{
-            marginTop: '8px', fontSize: '11px', fontWeight: 300, letterSpacing: '0.25em',
-            color: `rgba(244,199,107,${0.6 + breath * 0.15})`,
-            textDecoration: 'none', borderBottom: '1px solid rgba(244,199,107,0.2)', paddingBottom: '3px',
-            pointerEvents: logoReveal > 0.5 && logoFade > 0.5 ? 'auto' : 'none',
-          }}>ola@aymedo.io</a>
+
+          {/* Divider + contact — appears last */}
+          <div style={{
+            opacity: Math.min(1, Math.max(0, (logoReveal - 0.6) / 0.4)),
+            transform: `translateY(${(1 - Math.min(1, Math.max(0, (logoReveal - 0.6) / 0.4))) * 10}px)`,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '22px',
+          }}>
+            <div style={{ width: '50px', height: '1px', background: `rgba(244,199,107,${0.2 + breath * 0.1})` }} />
+            <div style={{ marginTop: '16px', fontSize: '9px', fontWeight: 300, letterSpacing: '0.3em', color: 'rgba(247,241,232,0.4)', textAlign: 'center', lineHeight: '1.9' }}>
+              To learn more about life<br />and for collaborations
+            </div>
+            <a href="mailto:ola@aymedo.io" style={{
+              marginTop: '10px', fontSize: '11px', fontWeight: 300, letterSpacing: '0.25em',
+              color: `rgba(244,199,107,${0.55 + breath * 0.15})`,
+              textDecoration: 'none', borderBottom: '1px solid rgba(244,199,107,0.2)', paddingBottom: '3px',
+              pointerEvents: logoReveal > 0.5 && logoFade > 0.5 ? 'auto' : 'none',
+            }}>ola@aymedo.io</a>
+          </div>
         </div>
 
         {/* ═══════════════════════════════════════
@@ -472,6 +572,7 @@ export default function Theatre() {
         @keyframes glassShimmer{0%,100%{opacity:0.7}50%{opacity:1}}
         @keyframes causticSlide{0%{transform:translateX(-30%);opacity:0.3}50%{transform:translateX(30%);opacity:0.8}100%{transform:translateX(-30%);opacity:0.3}}
         @keyframes sparkleFloat{0%{transform:translateY(0)}100%{transform:translateY(30px)}}
+        @keyframes particleOrbit{0%{transform:rotate(0deg) translateX(8px) rotate(0deg)}100%{transform:rotate(360deg) translateX(8px) rotate(-360deg)}}
         ::-webkit-scrollbar{display:none}
         html{scrollbar-width:none}
         ::selection{background:#F4C76B;color:#050505}
